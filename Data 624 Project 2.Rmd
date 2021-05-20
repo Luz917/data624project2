@@ -14,21 +14,26 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r message=FALSE, warning=FALSE}
-library(DataExplorer)
-library(ggplot2)
-library(psych)
-library(caret)
 library(tidyverse)
+library(mice)
+library(caret)
+library(e1071)
+library(psych)
+library(DataExplorer)
+library(RANN)
+library(MASS)
+library(ggplot2)
+library(elasticnet)
 ```
 
 
 
-## Problem Statement
+## 1. Problem Statement
 
 This is role playing. I am your new boss. I am in charge of production at ABC Beverage and you are a team of data scientists reporting to me. My leadership has told me that new regulations are requiring us to understand our manufacturing process, the predictive factors and be able to report to them our predictive model of PH. Please use the historical data set I am providing. Build and report the factors in BOTH a technical and non-technical report. I like to use Word and Excel. Please provide your non-technical report in a business friendly readable document and your predictions in an Excel readable format. The technical report should show clearly the models you tested and how you selected your final approach. Please submit both Rpubs links and .rmd files or other readable formats for technical and non-technical reports. Also submit the excel file showing the prediction of your models for pH.
 
 
-## Load Data 
+## 2. Load Data 
 
 
 ```{r}
@@ -42,13 +47,13 @@ dim(student_data)
 ```
 
 
-### Summary of Student Data
+### 2.2. Summary of Student Data
 
 ```{r}
 summary(student_data)
 ```
 
-### Summary of Student Evaluation 
+### 2.3. Summary of Student Evaluation 
 
 
 ```{r}
@@ -57,41 +62,36 @@ summary(student_eval)
 
 
 ```{r}
-colnames(student_data)
-```
-```{r}
 names(student_data)[names(student_data) == "ï..Brand.Code"] <- "Brand.Code"
 names(student_eval)[names(student_eval) == "ï..Brand.Code"] <- "Brand.Code"
 ```
 
-```{r}
-colnames(student_data)
-```
 
-## Data Exploration
 
-### Density
+## 3.Data Exploration
+
+### 3.1. Density
 
 ```{r}
 plot_density(student_data)
 ```
 
 
-## Pairs-Plot
+### 3.2. Pairs-Plot
 
 ```{r fig.height=8, fig.width=10}
-pairs.panels(student_data[1:13])
+pairs.panels(student_data[1:10])
 ```
 
 ```{r fig.height=8, fig.width=10}
-pairs.panels(student_data[14:23])
+pairs.panels(student_data[11:20])
 ```
 
 ```{r fig.height=8, fig.width=10}
-pairs.panels(student_data[24:33])
+pairs.panels(student_data[21:33])
 ```
 
-### Box Plot
+### 3.3. Box Plot
 
 
 ```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
@@ -106,7 +106,7 @@ ggplot(stack(student_data), aes(x= ind, y = values)) +
 
 
 
-### Missing Data 
+### 3.4. Missing Data 
 
 ```{r fig.height=5}
 plot_missing(student_data)
@@ -114,7 +114,7 @@ plot_missing(student_data)
 
 
 
-## Data Preparation 
+## 4. Data Preparation 
 
 ### Prepare and Create Dummy Variables of Brand.Code
 
@@ -154,35 +154,237 @@ Impute Data and Deal with Normality and NearZero
 prep <- preProcess(student_data, 
                    method = c("knnImpute", "center", "scale", "nzv"), k = 10)
 
-student_data_imp <- predict(prep, student_data)
+student_data <- predict(prep, student_data)
 student_eval <- predict(prep, student_eval)
 ```
 
 
 ```{r}
 # Train set
-highcor = findCorrelation(cor(student_data_imp), 0.85)
+highcor = findCorrelation(cor(student_data), 0.85)
 
-student_data_imp = student_data_imp[, -highcor]
+student_data = student_data[, -highcor]
 ```
 
   
 
-## Build Models   
+## 5. Build Models   
   
 
-### Split Train and Test Data 
+### 5.1. Split Train and Test Data 
+
+
+#### a. Split the data into a training and a test set
 
 ```{r}
 # Create training and testing split from training data
 set.seed(525)
-trainrow = createDataPartition(student_data_imp$PH, p = 0.70, list = FALSE)
-train_x = student_data_imp[trainrow, ] %>% select(-PH)
-train_Y = student_data_imp$PH[trainrow]
-test_X = student_data_imp[-trainrow, ] %>% select(-PH)
-test_Y = student_data_imp$PH[-trainrow]
+trainrow = createDataPartition(student_data$PH, p = 0.80, list = FALSE)
+student_data_train <- student_data[trainrow, ]
+student_data_test <- student_data[-trainrow, ]
+
+
+colPH <- which(colnames(student_data) == "PH")
+train_X <- student_data_train[, -colPH]
+train_Y <- student_data_train$PH
+test_X <- student_data_test[, -colPH]
+test_Y <- student_data_test$PH
 ```
 
+
+
+### 5.2. Linear
+
+#### a. Partial Least Square (PLS) 
+
+```{r}
+set.seed(1)
+PLS_model <- train(x=train_X,
+                y=train_Y, 
+                method='pls',
+                metric='Rsquared',
+                tuneLength=20,
+                trControl=trainControl(method='cv'),
+                preProcess=c('center', 'scale')
+                )
+
+PLS_model
+```
+
+
+
+```{r}
+plot(PLS_model)
+```
+
+
+```{r}
+PLS_model_pred <- predict(PLS_model, newdata=test_X)
+postResample(pred=PLS_model_pred, obs=test_Y)
+```
+
+
+#### b. Ridge 
+
+```{r}
+## Define the candidate set of values
+ridgeGrid <- data.frame(.lambda = seq(0, 1, by=0.1))
+set.seed(1)
+ridge_model <- train(x=train_X,
+                y=train_Y,
+               method = "ridge",
+               tuneGrid = ridgeGrid,
+               trControl = trainControl(method='cv') ,
+               preProc = c("center", "scale")
+              )
+
+ridge_model
+```
+
+
+```{r}
+plot(ridge_model)
+```
+
+```{r}
+ridge_model_pred <- predict(ridge_model, newdata=test_X)
+postResample(pred=ridge_model_pred, obs=test_Y)
+```
+
+
+#### c. Elastic Net (ENet)
+
+```{r message=FALSE, warning=FALSE}
+
+set.seed(1)
+enet_model <- train(x=train_X,
+                y= train_Y,
+               method = "enet",
+                tuneGrid=expand.grid(.fraction = seq(0, 1, by=0.1), 
+                                      .lambda = seq(0, 1, by=0.1)),
+               trControl = trainControl(method='cv') ,
+               preProc = c("center", "scale")
+              )
+
+enet_model
+```
+
+```{r}
+plot(enet_model)
+```
+
+
+
+```{r}
+enet_model_pred <- predict(enet_model, newdata=test_X)
+postResample(pred=enet_model_pred, obs=test_Y)
+```
+
+
+
+#### d. Lasso
+
+
+```{r message=FALSE, warning=FALSE}
+set.seed(1)
+lasso_model <- train(x=train_X,
+                  y=train_Y,
+                  method='lasso',
+                  metric='Rsquared',
+                  tuneGrid=data.frame(.fraction = seq(0, 0.5, by=0.05)),
+                  trControl=trainControl(method='cv'),
+                  preProcess=c('center','scale')
+                  )
+lasso_model
+```
+
+
+
+
+
+```{r}
+plot(lasso_model)
+```
+
+
+```{r}
+lasso_model_pred <- predict(lasso_model, newdata=test_X)
+postResample(pred=lasso_model_pred, obs=test_Y)
+```
+
+
+
+
+
+### 5.3. Non-Linear
+
+#### a. K-nearest Neighbors (KNN)
+
+#### b. Neural Networks (NNet)
+
+#### c. Multivariate Adaptive Regression Splines (MARS) 
+
+#### d. Support Vector Machines (SVM)
+
+
+### 5.4. Trees 
+
+#### a. Random Forest
+
+#### b. Gradient Boosting Machine
+
+#### c. Cubist 
+
+#### d. Bagging
+
+## 6. Model Evaluation and Model Selection 
+
+### 6.1. Variable Importance
+
+#### a. Linear
+
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+p1 <- plot(varImp(PLS_model), main = "PLS Model") 
+p2 <- plot(varImp(enet_model), main = "ENET Model")
+p3 <- plot(varImp(ridge_model), main = "Ridge Model")
+p4 <- plot(varImp(lasso_model), main = "Lasso Model")
+```
+```{r fig.height=10, fig.width=10}
+gridExtra::grid.arrange(p1,p2, p3,p4, nrow=2)
+```
+
+
+#### b. Non-Linear 
+
+#### c. Trees
+
+### 6.2. Test Models 
+
+#### a. Linear
+
+
+```{r}
+predictLinear<-rbind(
+  "PLS" = postResample(pred = PLS_model_pred, obs = test_Y),
+  "ENET" = postResample(pred = enet_model_pred, obs = test_Y),
+  "Ridge" = postResample(pred = ridge_model_pred, obs = test_Y),
+  "Lasso" = postResample(pred = lasso_model_pred, obs = test_Y)
+)
+predictLinear
+```
+
+#### b. Non-Linear
+
+
+#### c. Trees
+
+
+### 6.3. Model Selection
+
+### 6.4. Prediction on Evaluation Set
+
+## 7. Conclusion
 
 
 

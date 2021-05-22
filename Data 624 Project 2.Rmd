@@ -331,6 +331,26 @@ postResample(pred=lasso_model_pred, obs=test_Y)
 
 #### a. Random Forest
 
+```{r}
+### Random Forest
+library(randomForest)
+
+## Create training and test split on the data
+
+## A reminder of variables Mary created
+## train_X <- student_data_train[, -colPH]
+## train_Y <- student_data_train$PH
+## test_X <- student_data_test[, -colPH]
+## test_Y <- student_data_test$PH
+
+
+rf_model <- randomForest(x = train_X, y = train_Y, ntree = 300)
+rf_predicted <- predict(rf_model, testX)
+
+postResample(pred = rf_predicted, obs = testY)
+```
+
+
 #### b. Gradient Boosting Machine
 
 #### c. Cubist 

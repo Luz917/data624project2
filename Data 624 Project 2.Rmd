@@ -5,6 +5,7 @@ date: "5/11/2021"
 output:
   html_document:
     df_print: paged
+    theme: cerulean
   pdf_document: default
   word_document: default
 ---
@@ -24,48 +25,61 @@ library(RANN)
 library(MASS)
 library(ggplot2)
 library(elasticnet)
+library(randomForest)
 ```
 
 
 
 ## 1. Problem Statement
 
-This is role playing. I am your new boss. I am in charge of production at ABC Beverage and you are a team of data scientists reporting to me. My leadership has told me that new regulations are requiring us to understand our manufacturing process, the predictive factors and be able to report to them our predictive model of PH. Please use the historical data set I am providing. Build and report the factors in BOTH a technical and non-technical report. I like to use Word and Excel. Please provide your non-technical report in a business friendly readable document and your predictions in an Excel readable format. The technical report should show clearly the models you tested and how you selected your final approach. Please submit both Rpubs links and .rmd files or other readable formats for technical and non-technical reports. Also submit the excel file showing the prediction of your models for pH.
+This is role playing. I am your new boss. I am in charge of production at ABC Beverage and you are a team of data scientists reporting to me. My leadership has told me that new regulations are requiring us to understand our manufacturing process, the predictive factors and be able to report to them our predictive model of PH. Please use the historical data set I am providing. Build and report the factors in BOTH a technical and non-technical report. I like to use Word and Excel. Please provide your non-technical report in a business friendly readable document and your predictions in an Excel readable format. The technical report should show clearly the models you tested and how you selected your final approach. Please submit both RPubs links and .rmd files or other readable formats for technical and non-technical reports. Also submit the excel file showing the prediction of your models for pH.
 
 
 ## 2. Load Data 
 
+Two files are provided for this project. The file `StudentData.csv` contains the data used to build the predictive models for <i>PH</i>. The file `StudentEvaluation.csv` contains the data used to evaluate the selected model. The <i>PH</i> column in this file has no data.
 
 ```{r}
 student_data<-read.csv("https://raw.githubusercontent.com/Luz917/data624project2/master/StudentData.csv")
 student_eval<-read.csv("https://raw.githubusercontent.com/Luz917/data624project2/master/StudentEvaluation.csv")
 ```
 
+The modeling data set has 2,571 observations and 33 variables. 
 
 ```{r}
 dim(student_data)
 ```
 
-
 ### 2.2. Summary of Student Data
+
+As you can see, the `Student Data` data set contains categorical, continuous, and discrete variables. The data set has some missing values for most of the variables. The response variable <i>PH</i> has 4 missing values. All the predictor variables have missing values except for <i>Pressure.Vacuum</i> and <i>Air.Pressurer</i>. The categorical variable, <i>Brand.Code</i> has 120 missing values. 
 
 ```{r}
 summary(student_data)
+table(student_data$ï..Brand.Code)
 ```
 
 ### 2.3. Summary of Student Evaluation 
 
+The `Student Evaluation` data has 267 observations with 33 variables. 
+
+```{r}
+dim(student_eval)
+```
+
+As you can see, the `Student Evaluation` data also has some missing values for most of the variables. The response variable, <i>PH</i>, has no value as this will be predicted by the selected model. The categorical variable, <i>Brand.Code</i>, has 4 missing values. 
 
 ```{r}
 summary(student_eval)
+table(student_eval$ï..Brand.Code)
 ```
 
+Doing a little cleanup of the variable name `i..Brand.Code` and simply renaming this to `Brand.Code`. 
 
 ```{r}
 names(student_data)[names(student_data) == "ï..Brand.Code"] <- "Brand.Code"
 names(student_eval)[names(student_eval) == "ï..Brand.Code"] <- "Brand.Code"
 ```
-
 
 
 ## 3.Data Exploration
@@ -272,8 +286,6 @@ enet_model
 ```{r}
 plot(enet_model)
 ```
-
-
 
 ```{r}
 enet_model_pred <- predict(enet_model, newdata=test_X)

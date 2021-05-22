@@ -1,0 +1,235 @@
+## 5. Build Models   
+  
+
+### 5.1. Split Train and Test Data 
+
+
+#### a. Split the data into a training and a test set
+
+```{r}
+# Create training and testing split from training data
+set.seed(525)
+trainrow = createDataPartition(student_data$PH, p = 0.80, list = FALSE)
+student_data_train <- student_data[trainrow, ]
+student_data_test <- student_data[-trainrow, ]
+
+
+colPH <- which(colnames(student_data) == "PH")
+train_X <- student_data_train[, -colPH]
+train_Y <- student_data_train$PH
+test_X <- student_data_test[, -colPH]
+test_Y <- student_data_test$PH
+```
+
+
+
+### 5.2. Linear
+
+#### a. Partial Least Square (PLS) 
+
+```{r}
+set.seed(1)
+PLS_model <- train(x=train_X,
+                y=train_Y, 
+                method='pls',
+                metric='Rsquared',
+                tuneLength=20,
+                trControl=trainControl(method='cv'),
+                preProcess=c('center', 'scale')
+                )
+
+PLS_model
+```
+
+
+
+```{r}
+plot(PLS_model)
+```
+
+
+```{r}
+PLS_model_pred <- predict(PLS_model, newdata=test_X)
+postResample(pred=PLS_model_pred, obs=test_Y)
+```
+
+
+#### b. Ridge 
+
+```{r}
+## Define the candidate set of values
+ridgeGrid <- data.frame(.lambda = seq(0, 1, by=0.1))
+set.seed(1)
+ridge_model <- train(x=train_X,
+                y=train_Y,
+               method = "ridge",
+               tuneGrid = ridgeGrid,
+               trControl = trainControl(method='cv') ,
+               preProc = c("center", "scale")
+              )
+
+ridge_model
+```
+
+
+```{r}
+plot(ridge_model)
+```
+
+```{r}
+ridge_model_pred <- predict(ridge_model, newdata=test_X)
+postResample(pred=ridge_model_pred, obs=test_Y)
+```
+
+
+#### c. Elastic Net (ENet)
+
+```{r message=FALSE, warning=FALSE}
+
+set.seed(1)
+enet_model <- train(x=train_X,
+                y= train_Y,
+               method = "enet",
+                tuneGrid=expand.grid(.fraction = seq(0, 1, by=0.1), 
+                                      .lambda = seq(0, 1, by=0.1)),
+               trControl = trainControl(method='cv') ,
+               preProc = c("center", "scale")
+              )
+
+enet_model
+```
+
+```{r}
+plot(enet_model)
+```
+
+```{r}
+enet_model_pred <- predict(enet_model, newdata=test_X)
+postResample(pred=enet_model_pred, obs=test_Y)
+```
+
+
+
+#### d. Lasso
+
+
+```{r message=FALSE, warning=FALSE}
+set.seed(1)
+lasso_model <- train(x=train_X,
+                  y=train_Y,
+                  method='lasso',
+                  metric='Rsquared',
+                  tuneGrid=data.frame(.fraction = seq(0, 0.5, by=0.05)),
+                  trControl=trainControl(method='cv'),
+                  preProcess=c('center','scale')
+                  )
+lasso_model
+```
+
+
+
+
+
+```{r}
+plot(lasso_model)
+```
+
+
+```{r}
+lasso_model_pred <- predict(lasso_model, newdata=test_X)
+postResample(pred=lasso_model_pred, obs=test_Y)
+```
+
+
+
+
+
+### 5.3. Non-Linear
+
+#### a. K-nearest Neighbors (KNN)
+
+#### b. Neural Networks (NNet)
+
+#### c. Multivariate Adaptive Regression Splines (MARS) 
+
+#### d. Support Vector Machines (SVM)
+
+
+### 5.4. Trees 
+
+#### a. Random Forest
+
+```{r}
+### Random Forest
+library(randomForest)
+
+## Create training and test split on the data
+
+## A reminder of variables Mary created
+## train_X <- student_data_train[, -colPH]
+## train_Y <- student_data_train$PH
+## test_X <- student_data_test[, -colPH]
+## test_Y <- student_data_test$PH
+
+
+rf_model <- randomForest(x = train_X, y = train_Y, ntree = 300)
+rf_predicted <- predict(rf_model, testX)
+
+postResample(pred = rf_predicted, obs = testY)
+```
+
+
+#### b. Gradient Boosting Machine
+
+#### c. Cubist 
+
+#### d. Bagging
+
+## 6. Model Evaluation and Model Selection 
+
+### 6.1. Variable Importance
+
+#### a. Linear
+
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+p1 <- plot(varImp(PLS_model), main = "PLS Model") 
+p2 <- plot(varImp(enet_model), main = "ENET Model")
+p3 <- plot(varImp(ridge_model), main = "Ridge Model")
+p4 <- plot(varImp(lasso_model), main = "Lasso Model")
+```
+```{r fig.height=10, fig.width=10}
+gridExtra::grid.arrange(p1,p2, p3,p4, nrow=2)
+```
+
+
+#### b. Non-Linear 
+
+#### c. Trees
+
+### 6.2. Test Models 
+
+#### a. Linear
+
+
+```{r}
+predictLinear<-rbind(
+  "PLS" = postResample(pred = PLS_model_pred, obs = test_Y),
+  "ENET" = postResample(pred = enet_model_pred, obs = test_Y),
+  "Ridge" = postResample(pred = ridge_model_pred, obs = test_Y),
+  "Lasso" = postResample(pred = lasso_model_pred, obs = test_Y)
+)
+predictLinear
+```
+
+#### b. Non-Linear
+
+
+#### c. Trees
+
+
+### 6.3. Model Selection
+
+### 6.4. Prediction on Evaluation Set
+
+## 7. Conclusion

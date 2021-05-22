@@ -6,6 +6,7 @@ output:
   html_document:
     df_print: paged
     theme: cerulean
+    #code_folding: hide
   pdf_document: default
   word_document: default
 ---
@@ -26,14 +27,16 @@ library(MASS)
 library(ggplot2)
 library(elasticnet)
 library(randomForest)
+library(skimr)
+library(DataExplorer)
 ```
-
 
 
 ## 1. Problem Statement
 
 This is role playing. I am your new boss. I am in charge of production at ABC Beverage and you are a team of data scientists reporting to me. My leadership has told me that new regulations are requiring us to understand our manufacturing process, the predictive factors and be able to report to them our predictive model of PH. Please use the historical data set I am providing. Build and report the factors in BOTH a technical and non-technical report. I like to use Word and Excel. Please provide your non-technical report in a business friendly readable document and your predictions in an Excel readable format. The technical report should show clearly the models you tested and how you selected your final approach. Please submit both RPubs links and .rmd files or other readable formats for technical and non-technical reports. Also submit the excel file showing the prediction of your models for pH.
 
+---
 
 ## 2. Load Data 
 
@@ -44,18 +47,20 @@ student_data<-read.csv("https://raw.githubusercontent.com/Luz917/data624project2
 student_eval<-read.csv("https://raw.githubusercontent.com/Luz917/data624project2/master/StudentEvaluation.csv")
 ```
 
-The modeling data set has 2,571 observations and 33 variables. 
-
-```{r}
-dim(student_data)
-```
-
 ### 2.2. Summary of Student Data
 
-As you can see, the `Student Data` data set contains categorical, continuous, and discrete variables. The data set has some missing values for most of the variables. The response variable <i>PH</i> has 4 missing values. All the predictor variables have missing values except for <i>Pressure.Vacuum</i> and <i>Air.Pressurer</i>. The categorical variable, <i>Brand.Code</i> has 120 missing values. 
+The `Student Data` data set has 2,571 observations and 33 variables. 
+
+The data set contains categorical, continuous, and discrete variables. The data set has some missing values for most of the variables. The response variable <i>PH</i> has 4 missing values. All the predictor variables have missing values except for <i>Pressure.Vacuum</i> and <i>Air.Pressurer</i>. The categorical variable, <i>Brand.Code</i> has 120 missing values. 
 
 ```{r}
-summary(student_data)
+#summary(student_data)
+skim(student_data)
+```
+
+The variable <i>Brand.Code</i> has four different categories, and there are 120 observations with categories that are not known. 
+
+```{r}
 table(student_data$ï..Brand.Code)
 ```
 
@@ -63,14 +68,16 @@ table(student_data$ï..Brand.Code)
 
 The `Student Evaluation` data has 267 observations with 33 variables. 
 
+As you can see, the data set also has some missing values for most of the variables. The response variable, <i>PH</i>, has no value as this will be predicted by the selected model. The categorical variable, <i>Brand.Code</i>, has 4 missing values. 
+
 ```{r}
-dim(student_eval)
+#summary(student_eval)
+skim(student_eval)
 ```
 
-As you can see, the `Student Evaluation` data also has some missing values for most of the variables. The response variable, <i>PH</i>, has no value as this will be predicted by the selected model. The categorical variable, <i>Brand.Code</i>, has 4 missing values. 
+The variable <i>Brand.Code</i> of the evaluation data set has four different categories and eight observations without a known category. 
 
 ```{r}
-summary(student_eval)
 table(student_eval$ï..Brand.Code)
 ```
 
@@ -81,28 +88,36 @@ names(student_data)[names(student_data) == "ï..Brand.Code"] <- "Brand.Code"
 names(student_eval)[names(student_eval) == "ï..Brand.Code"] <- "Brand.Code"
 ```
 
+---
 
 ## 3.Data Exploration
 
-### 3.1. Density
+### 3.x Disribution of Response Variable <i>PH</i> 
+
+The distribution of the response variable <i>PH</i> is approximately normal with some degree of skewness to the left. The mean <i>PH</i> value is 8.5.
 
 ```{r}
-plot_density(student_data)
+plot_histogram(student_data$PH)
+```
+
+### 3.1. Distribution of Predictors
+
+Below shows the distribution of the numeric predictors. 
+
+```{r}
+plot_histogram((student_data[-c(26)]))
 ```
 
 
-### 3.2. Pairs-Plot
+### 3.2. Pairs
 
-```{r fig.height=8, fig.width=10}
-pairs.panels(student_data[1:10])
-```
+Below is a pairwise scatter plots of each of the 32 numeric variables. The upper triangular section shows the correlations coefficients between the pairs of variables. 
 
-```{r fig.height=8, fig.width=10}
-pairs.panels(student_data[11:20])
-```
+For a larger version of this plot, click here. 
 
-```{r fig.height=8, fig.width=10}
-pairs.panels(student_data[21:33])
+
+```{r fig.height=20, fig.width=20}
+pairs.panels(student_data[1:32])
 ```
 
 ### 3.3. Box Plot
@@ -182,241 +197,7 @@ student_data = student_data[, -highcor]
 
   
 
-## 5. Build Models   
-  
 
-### 5.1. Split Train and Test Data 
-
-
-#### a. Split the data into a training and a test set
-
-```{r}
-# Create training and testing split from training data
-set.seed(525)
-trainrow = createDataPartition(student_data$PH, p = 0.80, list = FALSE)
-student_data_train <- student_data[trainrow, ]
-student_data_test <- student_data[-trainrow, ]
-
-
-colPH <- which(colnames(student_data) == "PH")
-train_X <- student_data_train[, -colPH]
-train_Y <- student_data_train$PH
-test_X <- student_data_test[, -colPH]
-test_Y <- student_data_test$PH
-```
-
-
-
-### 5.2. Linear
-
-#### a. Partial Least Square (PLS) 
-
-```{r}
-set.seed(1)
-PLS_model <- train(x=train_X,
-                y=train_Y, 
-                method='pls',
-                metric='Rsquared',
-                tuneLength=20,
-                trControl=trainControl(method='cv'),
-                preProcess=c('center', 'scale')
-                )
-
-PLS_model
-```
-
-
-
-```{r}
-plot(PLS_model)
-```
-
-
-```{r}
-PLS_model_pred <- predict(PLS_model, newdata=test_X)
-postResample(pred=PLS_model_pred, obs=test_Y)
-```
-
-
-#### b. Ridge 
-
-```{r}
-## Define the candidate set of values
-ridgeGrid <- data.frame(.lambda = seq(0, 1, by=0.1))
-set.seed(1)
-ridge_model <- train(x=train_X,
-                y=train_Y,
-               method = "ridge",
-               tuneGrid = ridgeGrid,
-               trControl = trainControl(method='cv') ,
-               preProc = c("center", "scale")
-              )
-
-ridge_model
-```
-
-
-```{r}
-plot(ridge_model)
-```
-
-```{r}
-ridge_model_pred <- predict(ridge_model, newdata=test_X)
-postResample(pred=ridge_model_pred, obs=test_Y)
-```
-
-
-#### c. Elastic Net (ENet)
-
-```{r message=FALSE, warning=FALSE}
-
-set.seed(1)
-enet_model <- train(x=train_X,
-                y= train_Y,
-               method = "enet",
-                tuneGrid=expand.grid(.fraction = seq(0, 1, by=0.1), 
-                                      .lambda = seq(0, 1, by=0.1)),
-               trControl = trainControl(method='cv') ,
-               preProc = c("center", "scale")
-              )
-
-enet_model
-```
-
-```{r}
-plot(enet_model)
-```
-
-```{r}
-enet_model_pred <- predict(enet_model, newdata=test_X)
-postResample(pred=enet_model_pred, obs=test_Y)
-```
-
-
-
-#### d. Lasso
-
-
-```{r message=FALSE, warning=FALSE}
-set.seed(1)
-lasso_model <- train(x=train_X,
-                  y=train_Y,
-                  method='lasso',
-                  metric='Rsquared',
-                  tuneGrid=data.frame(.fraction = seq(0, 0.5, by=0.05)),
-                  trControl=trainControl(method='cv'),
-                  preProcess=c('center','scale')
-                  )
-lasso_model
-```
-
-
-
-
-
-```{r}
-plot(lasso_model)
-```
-
-
-```{r}
-lasso_model_pred <- predict(lasso_model, newdata=test_X)
-postResample(pred=lasso_model_pred, obs=test_Y)
-```
-
-
-
-
-
-### 5.3. Non-Linear
-
-#### a. K-nearest Neighbors (KNN)
-
-#### b. Neural Networks (NNet)
-
-#### c. Multivariate Adaptive Regression Splines (MARS) 
-
-#### d. Support Vector Machines (SVM)
-
-
-### 5.4. Trees 
-
-#### a. Random Forest
-
-```{r}
-### Random Forest
-library(randomForest)
-
-## Create training and test split on the data
-
-## A reminder of variables Mary created
-## train_X <- student_data_train[, -colPH]
-## train_Y <- student_data_train$PH
-## test_X <- student_data_test[, -colPH]
-## test_Y <- student_data_test$PH
-
-
-rf_model <- randomForest(x = train_X, y = train_Y, ntree = 300)
-rf_predicted <- predict(rf_model, testX)
-
-postResample(pred = rf_predicted, obs = testY)
-```
-
-
-#### b. Gradient Boosting Machine
-
-#### c. Cubist 
-
-#### d. Bagging
-
-## 6. Model Evaluation and Model Selection 
-
-### 6.1. Variable Importance
-
-#### a. Linear
-
-
-```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
-p1 <- plot(varImp(PLS_model), main = "PLS Model") 
-p2 <- plot(varImp(enet_model), main = "ENET Model")
-p3 <- plot(varImp(ridge_model), main = "Ridge Model")
-p4 <- plot(varImp(lasso_model), main = "Lasso Model")
-```
-```{r fig.height=10, fig.width=10}
-gridExtra::grid.arrange(p1,p2, p3,p4, nrow=2)
-```
-
-
-#### b. Non-Linear 
-
-#### c. Trees
-
-### 6.2. Test Models 
-
-#### a. Linear
-
-
-```{r}
-predictLinear<-rbind(
-  "PLS" = postResample(pred = PLS_model_pred, obs = test_Y),
-  "ENET" = postResample(pred = enet_model_pred, obs = test_Y),
-  "Ridge" = postResample(pred = ridge_model_pred, obs = test_Y),
-  "Lasso" = postResample(pred = lasso_model_pred, obs = test_Y)
-)
-predictLinear
-```
-
-#### b. Non-Linear
-
-
-#### c. Trees
-
-
-### 6.3. Model Selection
-
-### 6.4. Prediction on Evaluation Set
-
-## 7. Conclusion
 
 
 

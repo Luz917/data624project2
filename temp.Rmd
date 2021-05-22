@@ -1,3 +1,15 @@
+
+REmoved
+
+```{r}
+
+#pairs((student_data[,-c(1)]))
+
+#pairs.panels(student_data[,2:5])
+
+```
+
+
 ## 5. Build Models   
   
 

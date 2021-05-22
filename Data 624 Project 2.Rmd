@@ -29,6 +29,7 @@ library(elasticnet)
 library(randomForest)
 library(skimr)
 library(DataExplorer)
+library(GGally)
 ```
 
 
@@ -94,10 +95,10 @@ names(student_eval)[names(student_eval) == "ï..Brand.Code"] <- "Brand.Code"
 
 ### 3.x Disribution of Response Variable <i>PH</i> 
 
-The distribution of the response variable <i>PH</i> is approximately normal with some degree of skewness to the left. The mean <i>PH</i> value is 8.5.
+The distribution of the response variable <i>PH</i> is approximately normal with some degree of skewness to the left. The mean <i>PH</i> value is 8.5. We have fewer observations on the extremes of the distribution, which could mean that the models are not able to predict PH values that fall towards the edge of the distribution as we have less information to tune the models. 
 
 ```{r}
-plot_histogram(student_data$PH)
+hist(student_data$PH)
 ```
 
 ### 3.1. Distribution of Predictors
@@ -109,15 +110,21 @@ plot_histogram((student_data[-c(26)]))
 ```
 
 
-### 3.2. Pairs
+### 3.2. Pairwise Scatter plot
 
 Below is a pairwise scatter plots of each of the 32 numeric variables. The upper triangular section shows the correlations coefficients between the pairs of variables. 
 
-For a larger version of this plot, click here. 
+For a larger version of this plot, [click here](https://github.com/Luz917/data624project2/blob/Sherranette/pairs-result.png)
+
+```{r fig.height=20, fig.width=20, message=FALSE, warning=FALSE}
+ggpairs(student_data, columns=2:33, upper=list(continuous = "blank"))
+```
+
+### Correlation
 
 
-```{r fig.height=20, fig.width=20}
-pairs.panels(student_data[1:32])
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+plot_correlation(na.omit(student_data), maxcat = 5L)
 ```
 
 ### 3.3. Box Plot
@@ -129,8 +136,6 @@ ggplot(stack(student_data), aes(x= ind, y = values)) +
   theme_minimal()+
   coord_flip() 
 ```
-
-
 
 
 

@@ -389,7 +389,7 @@ student_eval$Brand.U <- Brand.U
 student_eval <- subset(student_eval, select = -c(Brand.Code))
 ```
 
-After the steps applied applied, the `student_data` data frame has 30 variables. 
+After the steps above were applied, the `student_data` data frame has 30 variables. 
 
 ```{r}
 skim(student_data)
@@ -401,9 +401,11 @@ skim(student_data)
 
 ## 4. Model Building 
 
+In this section, three categories of models were considered: (1) linear, (2) non-linear, and (3) tree-based. In total, nine models were considered. Linear models considered include PLS, Ridge, ENet, and Lasso.  Non-linear models considered include KNN, MARS, and SVM. Tree-based models considered include random forest and GBM.
+
 ### Split Train and Test Data 
 
-The code below splits the data frame `student_data`into training and testing sets with 80 percent of the observations going to the training set and 20 percent going to the test set. The training set is used to tune the models. 
+The code below splits the data frame `student_data`into training and test sets with 80 percent of the observations going to the training set and 20 percent going to the test set. The training set is used to tune the models. 
 
 ```{r}
 # Create training and testing split from training data
@@ -420,7 +422,7 @@ test_Y <- student_data_test$PH
 
 <br/>
 
-### Linear Model 
+### Linear Models
 
 <br/>
 
@@ -549,7 +551,7 @@ postResample(pred=lasso_model_pred, obs=test_Y)
 
 <br/>
 
-### Non-Linear
+### Non-Linear Models
 
 #### a. K-nearest Neighbors (KNN)
 
@@ -633,7 +635,7 @@ postResample(pred=svm_pred,test_Y)
 
 <br/>
 
-### Trees 
+### Tree-Based Models
 
 <br/>
 
@@ -678,7 +680,7 @@ postResample(pred = gbm_model_pred, obs = test_Y)
 
 ## 5. Variable of Importance
 
-Predictor `Mnf.flow` appears to be the most important predictor across all the different models considered. 
+Predictor `Mnf.flow` appears to be the most important predictor across the nine different models considered. 
 
 <br/>
 

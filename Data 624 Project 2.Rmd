@@ -56,7 +56,7 @@ This is role playing. I am your new boss. I am in charge of production at ABC Be
 
 ### Load Data 
 
-Two files are provided for this project. The file `StudentData.csv` contains the data used to build the predictive models for <i>PH</i>. The file `StudentEvaluation.csv` contains the data used to evaluate the selected model. The `PH` column in this file has no data.
+Two files are provided for this project. The file `StudentData.xlsx` contains the data used to build the predictive models for <i>PH</i>. The file `StudentEvaluation.xlsx` contains the data used to evaluate the selected model. The `PH` column in this file has no data. These files were converted to .csv and uploaded to the GitHub for easy loadability. 
 
 ```{r}
 student_data<-read.csv("https://raw.githubusercontent.com/Luz917/data624project2/master/StudentData.csv")
@@ -188,7 +188,7 @@ plot_histogram(student_data[c(23, 18, 27, 30, 19, 21)])
 
 ### Missing Data 
 
-As you can see, approximately 8.25 percent of the rows are missing values for `MFR` with a count of 212 missing values. Bias is likely in analyses when missingness is more than 10%. So, based on this rule of thumb, it's probably safe to impute missing values for `MFR`. Earlier data exploration revealed that the categorical variable `Brand.Code` has missing values. However, the `plot_missing` function did not reflect this, which originally showed a 0% value for missingness as the missing data are not represented by the value `NA`. To reflect the accurate missing ratio of `Brand.Code`, the value `NA` was assigned. Approximately, 4.67 percent of rows are missing for `Brad.Code`. The response variable `PH` missing ration is 0.16 percent with a count of 4. The rest of the other variables have low missing ratios, which suggests that imputation can be applied safely. 
+As you can see, approximately 8.25 percent of the rows are missing values for `MFR` with a count of 212 missing values. Bias is likely in analyses when missingness is more than 10%. So, based on this rule of thumb, it's probably safe to impute missing values for `MFR`. Earlier data exploration revealed that the categorical variable `Brand.Code` has missing values. However, the `plot_missing` function did not reflect this, which originally showed a 0% value for missingness as the missing data are not represented by the value `NA`. To reflect the accurate missing ratio of `Brand.Code`, the value `NA` was assigned. Approximately, 4.67 percent of rows are missing for `Brand.Code`. The response variable `PH` missing ration is 0.16 percent with a count of 4. The rest of the other variables have low missing ratios, which suggests that imputation can be applied safely. 
 
 
 ```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
@@ -282,6 +282,8 @@ Impute missing values through `mice` package. Below is an excerpt from the `mice
 
 > The mice package implements a method to deal with missing data. The package creates multiple imputations (replacement values) for multivariate missing data. The method is based on Fully Conditional Specification, where each incomplete variable is imputed by a separate model. The MICE algorithm can impute mixes of continuous, binary, unordered categorical and ordered categorical data. In addition, MICE can impute continuous two-level data, and maintain consistency between imputations by means of passive imputation. Many diagnostic plots are implemented to inspect the quality of the imputations.
 Apply the imputation function. The returns an S3 object of class `mids` (multiply imputed data set). 
+
+
 
 ```{r message =FALSE, warning=FALSE}
 s3obj_mice = mice(student_data, print = FALSE, seed = 360)
@@ -392,12 +394,18 @@ PLS_model
 plot(PLS_model)
 ```
 
+<<<<<<< HEAD
 Below is the performance of PLS model on the test set, which is similar to the training set. 
+=======
+
+>>>>>>> f55d251d9d57c3218b789ade2ffbe516e03ac991
 
 ```{r}
 PLS_model_pred <- predict(PLS_model, newdata=test_X)
 postResample(pred=PLS_model_pred, obs=test_Y)
 ```
+The function `postResample` is used to get performance of model on the test set. Performance of test set is comparable to training set. 
+
 <br/>
 
 ### b. Ridge 
@@ -686,7 +694,7 @@ gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
 
 
 
-## 7. Conclusion
+### 8. Conclusion
 
 
 

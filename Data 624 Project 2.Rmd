@@ -426,7 +426,7 @@ test_Y <- student_data_test$PH
 
 #### a. Partial Least Square (PLS)
 
-Here, we build the partial least square model. Rquared was used to select the optimal model. 
+Here, we build the partial least square model. Rsquared was used to select the optimal model. 
 
 ```{r}
 set.seed(1)
@@ -446,17 +446,13 @@ PLS_model
 plot(PLS_model)
 ```
 
-<<<<<<< HEAD
-Below is the performance of PLS model on the test set, which is similar to the training set. 
-=======
 
->>>>>>> f55d251d9d57c3218b789ade2ffbe516e03ac991
+Below is the performance of PLS model on the test set, which is similar to the training set. 
 
 ```{r}
 PLS_model_pred <- predict(PLS_model, newdata=test_X)
 postResample(pred=PLS_model_pred, obs=test_Y)
 ```
-The function `postResample` is used to get performance of model on the test set. Performance of test set is comparable to training set. 
 
 <br/>
 
@@ -481,12 +477,14 @@ ridge_model
 ```{r}
 plot(ridge_model)
 ```
+
 Below is the performance of ridge model on the test set, which is similar to the training set. 
 
 ```{r}
 ridge_model_pred <- predict(ridge_model, newdata=test_X)
 postResample(pred=ridge_model_pred, obs=test_Y)
 ```
+
 <br/>
 
 #### c. Elastic Net (ENet)
@@ -509,6 +507,7 @@ enet_model
 ```{r}
 plot(enet_model)
 ```
+
 Below is performance of ENet model on the test set, which is similar to training set. 
 
 ```{r}
@@ -540,12 +539,14 @@ lasso_model
 ```{r}
 plot(lasso_model)
 ```
+
 Below is performance of lasso model on test set, which is similar to training set. 
 
 ```{r}
 lasso_model_pred <- predict(lasso_model, newdata=test_X)
 postResample(pred=lasso_model_pred, obs=test_Y)
 ```
+
 <br/>
 
 ### Non-Linear
@@ -567,6 +568,7 @@ knn_model
 ```{r}
 plot(knn_model)
 ```
+
 Below is the performance of the KNN model on the test set, which is similar to the training set. 
 
 ```{r}
@@ -592,6 +594,7 @@ mars_model
 ```{r}
 plot(mars_model)
 ```
+
 Below is the performance of the MARS model on the test set, which is similar to the training set.  
 
 ```{r}
@@ -642,6 +645,7 @@ Here, we build the random forest model with `ntree` set to 100.
 rf_model <- randomForest(x = train_X, y = train_Y, ntree = 100)
 rf_model
 ```
+
 Below is the performance of the random forest model on the test set, which is similar to the training set. 
 
 ```{r}
@@ -680,6 +684,8 @@ Predictor `Mnf.flow` appears to be the most important predictor across all the d
 
 #### a. Linear Models 
 
+<br/> 
+
 The chart below shows the levels of importance for each predictor. For all linear models considered, `Mnf.flow` shows as the most important predictor. 
 
 ```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
@@ -697,6 +703,8 @@ gridExtra::grid.arrange(p1,p2, p3,p4, nrow=2)
 
 #### b. Non-Linear Models
 
+<br/> 
+
 The chart below shows the levels of importance for each predictor. For all the non-linear models, `Mnf.Flow` shows as the most important predictor.  
 
 ```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
@@ -712,6 +720,8 @@ gridExtra::grid.arrange(p1,p2, p3, nrow=2)
 <br/>
 
 #### c. Tree-Based Models 
+
+<br/> 
 
 The chart below shows the levels of importance for each predictor. For all tree-based models considered, `Mnf.flow` is the most important predictor. 
 
@@ -733,7 +743,7 @@ gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
 
 <br/> 
 
-### 6. Model Selection
+## 6. Model Selection
 
 <br/> 
 
@@ -741,7 +751,9 @@ gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
 
 ---
 
-### 7. Model Evaluation 
+<br/> 
+
+## 7. Model Evaluation 
 
 The `student_eval` data set has been processed in parallel with `student_data` so that any variables dropped or any imputation done on `student_data` is also performed on `student_eval`. 
 
@@ -753,7 +765,9 @@ skim(student_eval)
 
 ### Use Selected Model to Predict `PH` on `student_eval`
 
-The selected model is the random forest model. This model is used to predict response variable `PH` on the `student_data`. 
+<br/> 
+
+The selected model is the <b>random forest model</b>. This model is used to predict response variable `PH` on the `student_data`. 
 
 ```{r}
 
@@ -767,28 +781,40 @@ student_eval_results <- cbind(PH_hat, student_eval_predictors)
 write.csv(student_eval_results, "Student_Eval_Predictions.csv")
 ```
 
-#### Preview of predictions on selected model 
+#### Predicted `PH`
 
-```{r}
+<br/>
+
+Below is a preview of the predicted `PH`. 
+
+```{r echo=FALSE}
 datatable(student_eval_results)
 ```
 
 #### Overview of Predicted `PH`
 
-The predicted `PH` values do not show any values that don't make sense. 
+<br/>
 
-```{r}
+The predicted `PH` values do not show any values that fall outside the expected PH range of values.  
+
+```{r echo=FALSE}
 skim(student_eval_results$PH_hat)
 ```
+
+<br/> 
 
 The general shape of the distribution of the predicted `PH` is approximately normal. There are only 267 rows. 
 
 
-```{r}
+```{r echo=FALSE}
 hist(student_eval_results$PH)
 ```
 
-### 8. Conclusion
+---
+<br/> 
+
+
+## 8. Conclusion
 
 
 

@@ -30,6 +30,7 @@ library(randomForest)
 library(skimr)
 library(DataExplorer)
 library(GGally)
+library(corrplot)
 ```
 
 
@@ -103,7 +104,7 @@ hist(student_data$PH)
 
 ### 3.1. Distribution of Predictors
 
-Below shows the distribution of the numeric predictors. 
+Below shows the distribution of the numeric predictors. We can see that some variables have bimodal features (e.g., `Air Pressure`,  `Hyd.Pressure2`, `Hyd.Pressure3`, `Balling`). This is very interesting as this could suggests the existence of different groups, which could have different distributions. Some distributions suggests a more discrete features with a much more limited set of distinct values such as `Pressure Setpoint`, `PSC.CO2`, and `Bowl.Setpoint`. 
 
 ```{r}
 plot_histogram((student_data[-c(26)]))
@@ -112,37 +113,49 @@ plot_histogram((student_data[-c(26)]))
 
 ### 3.2. Pairwise Scatter plot
 
-Below is a pairwise scatter plots of each of the 32 numeric variables. The upper triangular section shows the correlations coefficients between the pairs of variables. 
+Below is a pairwise plot of the predictor variables versus the response variable <i>PH</i>. This should give us an idea of the predictors' relationship to the response variable. 
 
-For a larger version of this plot, [click here](https://github.com/Luz917/data624project2/blob/Sherranette/pairs-result.png)
 
-```{r fig.height=20, fig.width=20, message=FALSE, warning=FALSE}
-ggpairs(student_data, columns=2:33, upper=list(continuous = "blank"))
+```{r fig.height=13, fig.width=13, message=FALSE, warning=FALSE, echo=FALSE}
+
+pairs(student_data[c(26,2:11)], col="grey40")
+pairs(student_data[c(26,12:22)], col="grey40")
+pairs(student_data[c(26,23:25,27:33)], col="grey40")
 ```
 
-### Correlation
+### 3.3 Correlation
+
+Below is heat map of correlations between variables. As you can see, some variables are more strongly correlated than others. Response variable `PH` is more strongly correlated to `Mnf.Flow`.  `Hyd.Pressure3` has a somewhat moderate negative correlation with `Pressure.Vaccuum`. There are some variables with significant positive correlations. `Balling` is strongly correlated with `Balling.Lv1` (0.98), among others. Concerns about multicollinearity should be considered when selecting features for our models. We should avoid including pairs that are strongly correlated with each other. 
 
 
-```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
-plot_correlation(na.omit(student_data), maxcat = 5L)
-```
-
-### 3.3. Box Plot
-
-
-```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
-ggplot(stack(student_data), aes(x= ind, y = values)) + 
-  geom_boxplot(outlier.colour="green", outlier.shape=1, outlier.size=2,aes(fill=ind)) +
-  theme_minimal()+
-  coord_flip() 
+```{r fig.height=13, fig.width=13, message=FALSE, warning=FALSE, echo=FALSE}
+corr_data =cor(student_data[c(26,2:25,27:33)], use="pairwise.complete.obs", method = "pearson")
+corrplot(corr_data, method = "color",type = "upper", order = "original", number.cex = .7,addCoef.col = "black",   #Add coefficient of correlation
+                            tl.srt = 90,# Text label color and rotation
+                            diag = TRUE)# hide correlation coefficient on the principal diagonal
 ```
 
 
+### 3.4 Box Plot
+
+Below is a scaled box plots of the variables. As you can see, some of the variables have outliers. 
+
+```{r fig.height=13, fig.width=13, message=FALSE, warning=FALSE, echo=FALSE}
+x <- data.frame(scale(na.omit(student_data[c(2:33)])))
+ggplot(stack(x), aes(x= ind, y = values)) + 
+  geom_boxplot(outlier.colour="green", outlier.shape=1, outlier.size=2, aes(fill=ind)) + theme_minimal() + coord_flip() 
+```
 
 
-### 3.4. Missing Data 
+### 3.5 Missing Data 
 
-```{r fig.height=5}
+Notice that approximately 8.25 percent of the rows are missing a value for MFR. We may need to drop this feature considering that, as missingness increases, so do the potential negative consequences of imputation. Additionally, the categorical feature Brand Code is missing approximately 4.67 percent of its values. Since we do not know whether these values represent another brand or are actually missing, we will create a new feature category ‘Unknown’ consisting of missing values. The rest of the features are only missing small percentages of values, suggesting that KNN imputation should be safe.
+
+As you can see, approximately 8.25 percent of the rows are missing values for `MFR` with a count of 212 missing values. Bias is likely in analyses when missingness is more than 10%. Earlier data exploration revealed that the categorical variable `Brand.Code` has missing values. However, the `plot_missing` function did not reflect this, which originally showed a 0% value for missingness as the missing data are not represented by the value `NA`. To reflect the accurate missing ratio of `Brand.Code`, the value `NA` was assigned. Approximately, 4.67 percent of rows are missing for `Brad.Code`.
+
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+https://www.sciencedirect.com/science/article/pii/S0895435618308710
 plot_missing(student_data)
 ```
 

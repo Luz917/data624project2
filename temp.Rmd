@@ -7,6 +7,9 @@ REmoved
 
 #pairs.panels(student_data[,2:5])
 
+ggpairs(student_data, columns=2:33, upper=list(continuous = "blank"))
+
+plot_correlation(na.omit(student_data[c(2:25,27:33,26)]), maxcat = 5L)
 ```
 
 

@@ -332,30 +332,24 @@ postResample(pred=lasso_model_pred, obs=test_Y)
 #### a. Random Forest
 
 ```{r}
-### Random Forest
 library(randomForest)
-
-## Create training and test split on the data
-
-## A reminder of variables Mary created
-## train_X <- student_data_train[, -colPH]
-## train_Y <- student_data_train$PH
-## test_X <- student_data_test[, -colPH]
-## test_Y <- student_data_test$PH
-
-
-rf_model <- randomForest(x = train_X, y = train_Y, ntree = 300)
-rf_predicted <- predict(rf_model, testX)
-
-postResample(pred = rf_predicted, obs = testY)
+rf_model <- randomForest(x = train_X, y = train_Y, ntree = 100)
+rf_model_pred <- predict(rf_model, test_X)
+postResample(pred = rf_model_pred, obs = test_Y)
 ```
 
 
 #### b. Gradient Boosting Machine
+```{r}
+library(gbm)
+gbmGrid = expand.grid(interaction.depth = seq(1,5, by=2), n.trees = seq(100, 1000, by = 100), shrinkage = 0.1, n.minobsinnode = 5)
+gbm_model <- train(train_X, train_Y, tuneGrid = gbmGrid, verbose = FALSE, method = 'gbm' )
+gbm_model_pred <- predict(gbm_model, test_X)
+postResample(pred = gbm_model_pred, obs = test_Y)
+```
 
-#### c. Cubist 
 
-#### d. Bagging
+
 
 ## 6. Model Evaluation and Model Selection 
 
@@ -379,6 +373,22 @@ gridExtra::grid.arrange(p1,p2, p3,p4, nrow=2)
 
 #### c. Trees
 
+```{r}
+library(vip)
+rfImp1 <- rf_model$importance 
+p1_trees <-  vip(rf_model) + ggtitle('Random Forest Var Imp')
+```
+
+```{r}
+library(vip)
+gbmImp1 <- gbm_model$importance 
+p2_trees<-vip(gbm_model) + ggtitle('GBM Var Imp')
+```
+
+```{r fig.height=10, fig.width=10}
+gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
+```
+
 ### 6.2. Test Models 
 
 #### a. Linear
@@ -397,8 +407,15 @@ predictLinear
 #### b. Non-Linear
 
 
-#### c. Trees
 
+#### c. Trees
+```{r}
+predictTrees<-rbind(
+  "Random_Forest" = postResample(pred = rf_model_pred, obs = test_Y),
+  "Gradient_Boosting" = postResample(pred = gbm_model_pred, obs = test_Y)
+  )
+predictTrees
+```
 
 ### 6.3. Model Selection
 

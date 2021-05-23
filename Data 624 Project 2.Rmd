@@ -192,7 +192,12 @@ As you can see, approximately 8.25 percent of the rows are missing values for `M
 
 
 ```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+#student_data
 student_data[student_data$Brand.Code=="",]$Brand.Code <- NA
+
+#student_eval
+student_eval[student_eval$Brand.Code=="",]$Brand.Code <- NA
+
 plot_missing(student_data)
 ```
 
@@ -217,11 +222,14 @@ datatable(result[order(-result$nzv),])
 
 Based on the data exploration findings, we learned that there are missing values in the data set, predictors that are strongly correlated with each other, predictors that show near zero-variance, and predictors with outliers. 
 
-The `student_data` data frame is copied before we start modifying the data frame by dropping variables and imputing missing values. 
+The `student_data` data frame is copied before we start modifying the data frame by dropping variables and imputing missing values. The `student_eval` data is also processed in parallel with `student_data`.  
 
 ```{r}
 #copy of original student_data
 student_data2 <- student_data
+
+#copy of original student_eval
+student_eval2 <- student_eval
 ```
 
 <br/>
@@ -231,7 +239,11 @@ student_data2 <- student_data
 During data exploration, it was determined that predictor `Hyd.Pressure1` is a near zero-variance variable. This variable is dropped.   
 
 ```{r}
+#drop for student_data
 student_data$Hyd.Pressure1 <- NULL
+
+#drop for student_eval
+student_eval$Hyd.Pressure1 <- NULL
 ```
 
 <br/>
@@ -243,12 +255,21 @@ During data exploration, the `vifcor` function identified 6 predictors that have
 Drop variables `Balling`, `Bowl.Setpoint`, `Balling.Lvl`,`MFR`, `Hyd.Pressure3`, `Alch.Rel`. 
 
 ```{r}
+#drop for student_data
 student_data$Balling <- NULL
 student_data$Bowl.Setpoint <- NULL
 student_data$Balling.Lvl <- NULL
 student_data$MFR <- NULL
 student_data$Hyd.Pressure3 <- NULL
 student_data$Alch.Rel <- NULL
+
+#drop for student_eval
+student_eval$Balling <- NULL
+student_eval$Bowl.Setpoint <- NULL
+student_eval$Balling.Lvl <- NULL
+student_eval$MFR <- NULL
+student_eval$Hyd.Pressure3 <- NULL
+student_eval$Alch.Rel <- NULL
 ```
 
 <br/>
@@ -262,13 +283,20 @@ student_data$Alch.Rel <- NULL
 The code below drops observations with missing `PH` values. 
 
 ```{r}
+#drop for student_data
 student_data <- student_data[!is.na(student_data$PH), ]
+
+#note: student_eval all observations do not have PH values
 ```
 
 The blank `Brand.Code` values were explicitly assigned the value `NA` previously. The code below assigns the category `U` to blank values of `Brand.Code`. 
 
 ```{r}
+#student_data
 student_data[is.na(student_data$Brand.Code),]$Brand.Code <- 'U'
+
+#student_eval
+student_eval[is.na(student_eval$Brand.Code),]$Brand.Code <- 'U'
 ```
 
 Below is box plot of response variable `PH` by `Brand.Code` grouping. 
@@ -286,7 +314,11 @@ Apply the imputation function. The returns an S3 object of class `mids` (multipl
 
 
 ```{r message =FALSE, warning=FALSE}
+#student_data
 s3obj_mice = mice(student_data, print = FALSE, seed = 360)
+
+#student_eval
+s3obj_mice_eval = mice(student_eval, print = FALSE, seed = 360)
 ```
 
 Below is density plot of the variables with imputed data. 
@@ -298,7 +330,11 @@ densityplot(s3obj_mice)
 The `complete` function of the `mice` package exports the imputed data. Update `student_data` with the imputed results. 
 
 ```{r}
+#student_data
 student_data = complete(s3obj_mice)
+
+#student_eval
+student_eval = complete(s3obj_mice_eval)
 ```
 
 After the the data preparation steps applied above, the data frame is left with 2,567 observations and 26 variables. As you can see, we no longer have any missing values. 
@@ -335,6 +371,22 @@ student_data$Brand.D <- Brand.D
 student_data$Brand.U <- Brand.U
 # remove categorical variable
 student_data <- subset(student_data, select = -c(Brand.Code))
+
+
+#student_eval
+Brand.A <- ifelse(student_eval$Brand.Code  == 'A', 1, 0)
+Brand.B <- ifelse(student_eval$Brand.Code  == 'B', 1, 0)
+Brand.C <- ifelse(student_eval$Brand.Code  == 'C', 1, 0)
+Brand.D <- ifelse(student_eval$Brand.Code  == 'D', 1, 0)
+Brand.U <- ifelse(student_eval$Brand.Code  == 'U', 1, 0)
+# add dummy columns to data frame
+student_eval$Brand.A <- Brand.A
+student_eval$Brand.B <- Brand.B
+student_eval$Brand.C <- Brand.C
+student_eval$Brand.D <- Brand.D
+student_eval$Brand.U <- Brand.U
+# remove categorical variable
+student_eval <- subset(student_eval, select = -c(Brand.Code))
 ```
 
 After the steps applied applied, the `student_data` data frame has 30 variables. 
@@ -691,8 +743,50 @@ gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
 
 ### 7. Model Evaluation 
 
+The `student_eval` data set has been processed in parallel with `student_data` so that any variables dropped or any imputation done on `student_data` is also performed on `student_eval`. 
+
+At this stage, we should expect for `student_eval` to have no missing values except for `PH`. The evaluation data set has 267 observations. As expected, there are 29 predictors. 
+
+```{r}
+skim(student_eval)
+```
+
+### Use Selected Model to Predict `PH` on `student_eval`
+
+The selected model is the random forest model. This model is used to predict response variable `PH` on the `student_data`. 
+
+```{r}
+
+student_eval_predictors <- subset(student_eval, select = -PH)
+
+#Prediction is run on random forest model 
+PH_hat <- predict(rf_model, student_eval_predictors)
+student_eval_results <- cbind(PH_hat, student_eval_predictors)
+
+#save copy to csv
+write.csv(student_eval_results, "Student_Eval_Predictions.csv")
+```
+
+#### Preview of predictions on selected model 
+
+```{r}
+datatable(student_eval_results)
+```
+
+#### Overview of Predicted `PH`
+
+The predicted `PH` values do not show any values that don't make sense. 
+
+```{r}
+skim(student_eval_results$PH_hat)
+```
+
+The general shape of the distribution of the predicted `PH` is approximately normal. There are only 267 rows. 
 
 
+```{r}
+hist(student_eval_results$PH)
+```
 
 ### 8. Conclusion
 

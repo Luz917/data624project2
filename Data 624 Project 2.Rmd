@@ -372,6 +372,7 @@ test_Y <- student_data_test$PH
 
 #### a. Partial Least Square (PLS)
 
+Here, we build the partial least square model. Rquared was used to select the optimal model. 
 
 ```{r}
 set.seed(1)
@@ -385,13 +386,13 @@ PLS_model <- train(x=train_X,
                 )
 PLS_model
 ```
-Below is the plot for PLS model's RMSE and number of components. 
+
 
 ```{r}
 plot(PLS_model)
 ```
 
-The function `postResample` is used to get performance of model on the test set. Performance of test set is comparable to training set. 
+Below is the performance of PLS model on the test set, which is similar to the training set. 
 
 ```{r}
 PLS_model_pred <- predict(PLS_model, newdata=test_X)
@@ -400,6 +401,8 @@ postResample(pred=PLS_model_pred, obs=test_Y)
 <br/>
 
 ### b. Ridge 
+
+Here, we build the ridge model. RMSE was used to select the optimal model. 
 
 ```{r}
 ## Define the candidate set of values
@@ -418,7 +421,7 @@ ridge_model
 ```{r}
 plot(ridge_model)
 ```
-
+Below is the performance of ridge model on the test set, which is similar to the training set. 
 
 ```{r}
 ridge_model_pred <- predict(ridge_model, newdata=test_X)
@@ -427,6 +430,8 @@ postResample(pred=ridge_model_pred, obs=test_Y)
 <br/>
 
 #### c. Elastic Net (ENet)
+
+Here, we build the Elastic Net model. RMSE was used to select the optimal model. 
 
 ```{r message=FALSE, warning=FALSE}
 set.seed(1)
@@ -444,6 +449,7 @@ enet_model
 ```{r}
 plot(enet_model)
 ```
+Below is performance of ENet model on the test set, which is similar to training set. 
 
 ```{r}
 enet_model_pred <- predict(enet_model, newdata=test_X)
@@ -454,6 +460,8 @@ postResample(pred=enet_model_pred, obs=test_Y)
 
 
 #### d. Lasso
+
+Here, we build the lasso model. Rsquared was used to select the optimal model. 
 
 
 ```{r message=FALSE, warning=FALSE}
@@ -472,6 +480,7 @@ lasso_model
 ```{r}
 plot(lasso_model)
 ```
+Below is performance of lasso model on test set, which is similar to training set. 
 
 ```{r}
 lasso_model_pred <- predict(lasso_model, newdata=test_X)
@@ -482,6 +491,8 @@ postResample(pred=lasso_model_pred, obs=test_Y)
 ### Non-Linear
 
 #### a. K-nearest Neighbors (KNN)
+
+Here, we build the K-nearest Neighbor model. RMSE metric was used to select the optimal model.
 
 ```{r}
 set.seed(1)
@@ -496,6 +507,7 @@ knn_model
 ```{r}
 plot(knn_model)
 ```
+Below is the performance of the KNN model on the test set, which is similar to the training set. 
 
 ```{r}
 knn_pred <- predict(knn_model, newdata=test_X)
@@ -504,7 +516,9 @@ postResample(pred=knn_pred,test_Y)
 
 <br/>
 
-#### c. Multivariate Adaptive Regression Splines (MARS) 
+#### b. Multivariate Adaptive Regression Splines (MARS) 
+
+Here, we build the MARS model. RMSE metric was used to select the optimal model. 
 
 ```{r}
 set.seed(1)
@@ -518,6 +532,7 @@ mars_model
 ```{r}
 plot(mars_model)
 ```
+Below is the performance of the MARS model on the test set, which is similar to the training set.  
 
 ```{r}
 mars_pred <- predict(mars_model, newdata=test_X)
@@ -526,7 +541,9 @@ postResample(pred=mars_pred, test_Y)
 
 <br/>
 
-#### d. Support Vector Machines (SVM)
+#### c. Support Vector Machines (SVM)
+
+Here, we build the SVM model. RMSE was used to select the optimal model. 
 
 ```{r}
 set.seed(1)
@@ -539,10 +556,11 @@ svm_model <- train(train_X,
 svm_model
 ```
 
-
 ```{r}
 plot(svm_model)
 ```
+
+Below is the performance of the SVM model on the test set, which is similar to the training set. 
 
 ```{r}
 svm_pred <- predict(svm_model, newdata=test_X)
@@ -558,11 +576,13 @@ postResample(pred=svm_pred,test_Y)
 
 #### a. Random Forest
 
+Here, we build the random forest model with `ntree` set to 100. 
+
 ```{r}
 rf_model <- randomForest(x = train_X, y = train_Y, ntree = 100)
 rf_model
 ```
-
+Below is the performance of the random forest model on the test set, which is similar to the training set. 
 
 ```{r}
 rf_model_pred <- predict(rf_model, test_X)
@@ -571,13 +591,17 @@ postResample(pred = rf_model_pred, obs = test_Y)
 
 <br/>
 
-#### b. Gradient Boosting Machine
+#### b. Gradient Boosting Machine (GBM)
+
+Here, we build the gradient boosting machine model. RMSE was used to select the optimal model. 
 
 ```{r}
 gbmGrid = expand.grid(interaction.depth = seq(1,5, by=2), n.trees = seq(100, 1000, by = 100), shrinkage = 0.1, n.minobsinnode = 5)
 gbm_model <- train(train_X, train_Y, tuneGrid = gbmGrid, verbose = FALSE, method = 'gbm' )
 gbm_model
 ```
+
+Below is the performance of the GMB model on the test set, which is similar to the training set. 
 
 ```{r}
 gbm_model_pred <- predict(gbm_model, test_X)
@@ -588,16 +612,15 @@ postResample(pred = gbm_model_pred, obs = test_Y)
 
 <br/>
 
-## 6. Model Evaluation and Model Selection 
+## 5. Variable of Importance
+
+Predictor `Mnf.flow` appears to be the most important predictor across all the different models considered. 
 
 <br/>
 
-### 6.1. Variable Importance
+#### a. Linear Models 
 
-<br/>
-
-#### a. Linear
-
+The chart below shows the levels of importance for each predictor. For all linear models considered, `Mnf.flow` shows as the most important predictor. 
 
 ```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
 p1 <- plot(varImp(PLS_model), main = "PLS Model") 
@@ -605,35 +628,63 @@ p2 <- plot(varImp(enet_model), main = "ENET Model")
 p3 <- plot(varImp(ridge_model), main = "Ridge Model")
 p4 <- plot(varImp(lasso_model), main = "Lasso Model")
 ```
-```{r fig.height=10, fig.width=10}
+
+```{r fig.height=10, fig.width=10, echo=FALSE}
 gridExtra::grid.arrange(p1,p2, p3,p4, nrow=2)
 ```
 
 <br/>
 
-#### b. Non-Linear 
+#### b. Non-Linear Models
+
+The chart below shows the levels of importance for each predictor. For all the non-linear models, `Mnf.Flow` shows as the most important predictor.  
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+p1 <- plot(varImp(knn_model), main = "KNN Model") 
+p2 <- plot(varImp(mars_model), main = "MARS Model")
+p3 <- plot(varImp(svm_model), main = "SVM Model")
+```
+
+```{r fig.height=10, fig.width=10, echo=FALSE}
+gridExtra::grid.arrange(p1,p2, p3, nrow=2)
+```
 
 <br/>
 
-#### c. Trees
+#### c. Tree-Based Models 
 
-```{r}
+The chart below shows the levels of importance for each predictor. For all tree-based models considered, `Mnf.flow` is the most important predictor. 
+
+```{r echo=FALSE}
 rfImp1 <- rf_model$importance 
 p1_trees <-  vip(rf_model) + ggtitle('Random Forest Var Imp')
 ```
 
-```{r}
+```{r echo=FALSE}
 gbmImp1 <- gbm_model$importance 
 p2_trees<-vip(gbm_model) + ggtitle('GBM Var Imp')
 ```
 
-```{r fig.height=10, fig.width=10}
+```{r fig.height=5, fig.width=10, echo=FALSE}
 gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
 ```
 
-### 6.3. Model Selection
+---
 
-### 6.4. Prediction on Evaluation Set
+<br/> 
+
+### 6. Model Selection
+
+<br/> 
+
+### Prediction on Evaluation Set
+
+---
+
+### 7. Model Evaluation 
+
+
+
 
 ## 7. Conclusion
 

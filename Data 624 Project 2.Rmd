@@ -420,6 +420,15 @@ test_X <- student_data_test[, -colPH]
 test_Y <- student_data_test$PH
 ```
 
+Build data frames to save training and test performance. 
+
+```{r}
+#collect results of training and test results on models
+perf_train <- data.frame(Model=character(), RMSE=double(), RSquared=double(), MAE=double())
+perf_test <- data.frame(Model=character(), RMSE=double(), RSquared=double(), MAE=double())
+```
+
+
 <br/>
 
 ### Linear Models
@@ -453,8 +462,20 @@ Below is the performance of PLS model on the test set, which is similar to the t
 
 ```{r}
 PLS_model_pred <- predict(PLS_model, newdata=test_X)
-postResample(pred=PLS_model_pred, obs=test_Y)
+(PLS_test <- postResample(pred=PLS_model_pred, obs=test_Y))
 ```
+
+Save training and test performance. 
+
+```{r}
+#PLS
+#save training and test perf
+r <- PLS_model$results
+s <- r[which(r$ncomp == PLS_model$bestTune$ncomp),]
+perf_train[nrow(perf_train) + 1,] = c("PLS", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("PLS", PLS_test[1], PLS_test[2], PLS_test[3])
+```
+
 
 <br/>
 
@@ -484,8 +505,20 @@ Below is the performance of ridge model on the test set, which is similar to the
 
 ```{r}
 ridge_model_pred <- predict(ridge_model, newdata=test_X)
-postResample(pred=ridge_model_pred, obs=test_Y)
+(ridge_test <- postResample(pred=ridge_model_pred, obs=test_Y))
 ```
+Save training and test performance. 
+
+```{r}
+#RIDGE
+#save training and test perf
+r <- ridge_model$results
+s <- r[which(r$lambda == ridge_model$bestTune$lambda),]
+perf_train[nrow(perf_train) + 1,] = c("Ridge", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("Ridge", ridge_test[1], ridge_test[2], ridge_test[3])
+```
+
+
 
 <br/>
 
@@ -514,7 +547,18 @@ Below is performance of ENet model on the test set, which is similar to training
 
 ```{r}
 enet_model_pred <- predict(enet_model, newdata=test_X)
-postResample(pred=enet_model_pred, obs=test_Y)
+(enet_test <- postResample(pred=enet_model_pred, obs=test_Y))
+```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#Enet
+#save training and test perf
+r <- enet_model$results
+s <- r[which(r$lambda == enet_model$bestTune$lambda & r$fraction == enet_model$bestTune$fraction),]
+perf_train[nrow(perf_train) + 1,] = c("Enet", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("Enet", enet_test[1], enet_test[2], enet_test[3])
 ```
 
 <br/>
@@ -546,12 +590,27 @@ Below is performance of lasso model on test set, which is similar to training se
 
 ```{r}
 lasso_model_pred <- predict(lasso_model, newdata=test_X)
-postResample(pred=lasso_model_pred, obs=test_Y)
+(lasso_test <- postResample(pred=lasso_model_pred, obs=test_Y))
 ```
+
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#LASSo
+#save training and test perf
+r <- lasso_model$results
+s <- r[which(r$fraction == lasso_model$bestTune$fraction),]
+perf_train[nrow(perf_train) + 1,] = c("Lasso", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("Lasso", lasso_test[1], lasso_test[2], lasso_test[3])
+```
+
 
 <br/>
 
 ### Non-Linear Models
+
+<br/>
 
 #### a. K-nearest Neighbors (KNN)
 
@@ -575,8 +634,20 @@ Below is the performance of the KNN model on the test set, which is similar to t
 
 ```{r}
 knn_pred <- predict(knn_model, newdata=test_X)
-postResample(pred=knn_pred,test_Y)
+(knn_test <- postResample(pred=knn_pred,test_Y))
 ```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#KNN
+#save training and test perf
+r <- knn_model$results
+s <- r[which(r$k == knn_model$bestTune$k),]
+perf_train[nrow(perf_train) + 1,] = c("KNN", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("KNN", knn_test[1], knn_test[2], knn_test[3])
+```
+
 
 <br/>
 
@@ -601,8 +672,20 @@ Below is the performance of the MARS model on the test set, which is similar to 
 
 ```{r}
 mars_pred <- predict(mars_model, newdata=test_X)
-postResample(pred=mars_pred, test_Y)
+(mars_test <- postResample(pred=mars_pred, test_Y))
 ```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#MARS
+#save training and test perf
+r <- mars_model$results
+s <- r[which(r$nprune == mars_model$bestTune$nprune & r$degree == mars_model$bestTune$degree),]
+perf_train[nrow(perf_train) + 1,] = c("MARS", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("MARS", mars_test[1], mars_test[2], mars_test[3])
+```
+
 
 <br/>
 
@@ -629,7 +712,18 @@ Below is the performance of the SVM model on the test set, which is similar to t
 
 ```{r}
 svm_pred <- predict(svm_model, newdata=test_X)
-postResample(pred=svm_pred,test_Y)
+(svm_test <- postResample(pred=svm_pred,test_Y))
+```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#SVM
+#save training and test perf
+r <- svm_model$results
+s <- r[which(r$sigma == svm_model$bestTune$sigma & r$C == svm_model$bestTune$C),]
+perf_train[nrow(perf_train) + 1,] = c("SVM", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3])
 ```
 
 
@@ -652,8 +746,17 @@ Below is the performance of the random forest model on the test set, which is si
 
 ```{r}
 rf_model_pred <- predict(rf_model, test_X)
-postResample(pred = rf_model_pred, obs = test_Y)
+(rf_test <- postResample(pred = rf_model_pred, obs = test_Y))
 ```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#Random Forest
+#save training and test perf
+perf_test[nrow(perf_test) + 1,] = c("Random Forest", rf_test[1], rf_test[2], rf_test[3])
+```
+
 
 <br/>
 
@@ -671,8 +774,20 @@ Below is the performance of the GMB model on the test set, which is similar to t
 
 ```{r}
 gbm_model_pred <- predict(gbm_model, test_X)
-postResample(pred = gbm_model_pred, obs = test_Y)
+(gbm_test <- postResample(pred = gbm_model_pred, obs = test_Y))
 ```
+
+```{r echo=FALSE}
+#GBM
+#save training and test perf
+r <- gbm_model$results
+t <- gbm_model$bestTune
+s <- r[which(r$n.trees == t$n.trees & r$interaction.depth == t$interaction.depth & 
+               r$shrinkage == t$shrinkage & r$n.minobsinnode == t$n.minobsinnode),]
+perf_train[nrow(perf_train) + 1,] = c("GBM", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("GBM", gbm_test[1], gbm_test[2], gbm_test[3])
+```
+
 
 ---
 
@@ -690,7 +805,7 @@ Predictor `Mnf.flow` appears to be the most important predictor across the nine 
 
 The chart below shows the levels of importance for each predictor. For all linear models considered, `Mnf.flow` shows as the most important predictor. 
 
-```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
 p1 <- plot(varImp(PLS_model), main = "PLS Model") 
 p2 <- plot(varImp(enet_model), main = "ENET Model")
 p3 <- plot(varImp(ridge_model), main = "Ridge Model")
@@ -747,9 +862,31 @@ gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
 
 ## 6. Model Selection
 
+Nine different models were considered from three different classes of models, which includes linear, non-linear, and tree-based models. For model selection, we've decided to compare the performance of each model on the test set using RMSE. Below is a table that shows how well each model did based on RMSE, RSquared, and MAE. 
+
+As you can see, Random Forest model is the best performing model based on lowest RMSE. It also happens to be the model with the highest r-squared as well. 
+
+
+### Performance of Models on Test Set 
+
+```{r}
+datatable(perf_test[order(perf_test$RMSE),])
+```
+
+### Tuning Performance
+
+Below is a table that shows the performance of each model on the training set. The random forest metrics are below the table (as we could not figure out how to add it in the table dynamically). 
+
+```{r}
+datatable(perf_train[order(perf_train$RMSE),])
+```
 <br/> 
 
-### Prediction on Evaluation Set
+Random Forest is not in the table above. Below is this model's performance on the training set. 
+
+```{r echo=FALSE}
+rf_model
+```
 
 ---
 
@@ -783,9 +920,9 @@ student_eval_results <- cbind(PH_hat, student_eval_predictors)
 write.csv(student_eval_results, "Student_Eval_Predictions.csv")
 ```
 
-#### Predicted `PH`
+<br/> 
 
-<br/>
+#### Predicted `PH`
 
 Below is a preview of the predicted `PH`. 
 

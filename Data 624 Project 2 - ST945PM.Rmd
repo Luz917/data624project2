@@ -1,0 +1,980 @@
+---
+title: "Data 624 Project 2"
+author: "Maryluz Cruz, Bill Stepniak, Sherranette Tinapunan"
+date: "5/11/2021"
+output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    #code_folding: hide
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+library(tidyverse)
+library(mice)
+library(caret)
+library(e1071)
+library(psych)
+library(DataExplorer)
+library(RANN)
+library(MASS)
+library(ggplot2)
+library(elasticnet)
+library(randomForest)
+library(skimr)
+library(DataExplorer)
+library(GGally)
+library(corrplot)
+library(DT)
+library(usdm)
+library(randomForest)
+library(vip)
+library(gbm)
+library(parallel)
+library(kernlab)
+library(doParallel)
+library(earth)
+```
+
+<br/>
+
+---
+
+## 1. Problem Statement
+
+This is role playing. I am your new boss. I am in charge of production at ABC Beverage and you are a team of data scientists reporting to me. My leadership has told me that new regulations are requiring us to understand our manufacturing process, the predictive factors and be able to report to them our predictive model of PH. Please use the historical data set I am providing. Build and report the factors in BOTH a technical and non-technical report. I like to use Word and Excel. Please provide your non-technical report in a business friendly readable document and your predictions in an Excel readable format. The technical report should show clearly the models you tested and how you selected your final approach. Please submit both RPubs links and .rmd files or other readable formats for technical and non-technical reports. Also submit the excel file showing the prediction of your models for pH.
+
+---
+
+## 2. Data Exploration 
+
+### Load Data 
+
+Two files are provided for this project. The file `StudentData.xlsx` contains the data used to build the predictive models for <i>PH</i>. The file `StudentEvaluation.xlsx` contains the data used to evaluate the selected model. The `PH` column in this file has no data. These files were converted to .csv and uploaded to the GitHub for easy loadability. 
+
+```{r}
+student_data<-read.csv("https://raw.githubusercontent.com/Luz917/data624project2/master/StudentData.csv")
+student_eval<-read.csv("https://raw.githubusercontent.com/Luz917/data624project2/master/StudentEvaluation.csv")
+```
+
+<br/>
+
+### Summary of Student Data
+
+The `Student Data` data set has 2,571 observations and 33 variables. 
+
+This data set contains categorical, continuous, and discrete variables. The data set has some missing values for most of the variables. The response variable `PH` has four missing values. All the predictor variables have missing values except for`Pressure.Vacuum` and `Air.Pressure`. The categorical variable `Brand.Code` has blank values. 
+
+```{r echo=FALSE}
+skim(student_data)
+```
+
+Predictor `Brand.Code` has four different categories, and there are 120 observations with categories that are not known. 
+
+```{r}
+table(student_data$ï..Brand.Code)
+```
+
+Doing a little cleanup of the variable name `i..Brand.Code` and simply renaming this to `Brand.Code`. 
+
+```{r}
+names(student_data)[names(student_data) == "ï..Brand.Code"] <- "Brand.Code"
+names(student_eval)[names(student_eval) == "ï..Brand.Code"] <- "Brand.Code"
+```
+
+<br/>
+
+### Disribution of Response Variable `PH`
+
+The distribution of the response variable `PH` is approximately normal with some degree of skewness to the left. The mean `PH` value is 8.5. Because we have fewer observations towards the end of the distribution, this could mean that the models are not able to predict `PH` values that fall towards the tails of the distribution. 
+
+
+```{r}
+hist(student_data$PH)
+```
+<br/>
+
+### Distribution of Predictors
+
+Below shows the distribution of the numeric predictors. We can see that some variables have bimodal features (e.g., `Air Pressure`,  `Hyd.Pressure2`, `Hyd.Pressure3`, `Balling`). Multimodal distributions could suggests different groups or different regions with another type of distribution shape. Some distributions appear to be more discrete with much more limited set of distinct values such as `Pressure Setpoint`, `PSC.CO2`, and `Bowl.Setpoint`. 
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+plot_histogram((student_data[-c(26)]))
+```
+
+<br/>
+
+### Scatter Plots of Predictors with Response Variable
+
+Below is a pairwise plot of the predictor variables versus the response variable `PH`. This should give us an idea of the predictors' relationship to the response variable. 
+
+
+```{r fig.height=13, fig.width=13, message=FALSE, warning=FALSE, echo=FALSE}
+pairs(student_data[c(26,2:11)], col="grey40")
+pairs(student_data[c(26,12:22)], col="grey40")
+pairs(student_data[c(26,23:25,27:33)], col="grey40")
+```
+
+<br/>
+
+### Correlation
+
+Below is heat map of correlations between variables. As you can see, some variables are more strongly correlated than others. Response variable `PH` is more strongly correlated to `Mnf.Flow`.  `Hyd.Pressure3` has a somewhat moderate negative correlation with `Pressure.Vaccuum`. There are some variables with significant positive correlations. `Balling` is strongly correlated with `Balling.Lv1` (0.98), among others. Concerns about multicollinearity should be considered when selecting features for our models. We should avoid including pairs that are strongly correlated with each other. 
+
+
+```{r fig.height=12, fig.width=12, message=FALSE, warning=FALSE, echo=FALSE}
+corr_data =cor(student_data[c(26,2:25,27:33)], use="pairwise.complete.obs", method = "pearson")
+corrplot(corr_data, method = "color",type = "upper", order = "original", number.cex = .7,addCoef.col = "black",   #Add coefficient of correlation
+                            tl.srt = 90,# Text label color and rotation
+                            diag = TRUE)# hide correlation coefficient on the principal diagonal
+```
+
+<br/>
+
+### Identify Multicollinearity Problem 
+
+The `vifcor` function of the `usdm` package calculates variance inflation factor (VIF). This function excludes highly correlated variables from the set through stepwise procedure. This is function is used to deal with multicollinearity problem. 
+
+The function identified 6 variables from the 31 predictors that have collinearity problem. These are `Balling`, `Bowl.Setpoint`, `Balling.Lvl`,`MFR`, `Hyd.Pressure3`, and  `Alch.Rel`. 
+
+```{r}
+(vif_result <- vifcor(na.omit(student_data[c(2:25,27:33)])))
+```
+
+Below, we remove the 6 variables with collinearity problem and run the `vifcor` function again after removing these 6 problematic variables. The output confirms that there are no more variables with collinearity problem. We will be dropping these 6 predictors from the data frame. 
+
+```{r}
+temp <- student_data[c(2:25,27:33)]
+temp$Balling <- NULL
+temp$Bowl.Setpoint <- NULL
+temp$Balling.Lvl <- NULL
+temp$MFR <- NULL
+temp$Hyd.Pressure3 <- NULL
+temp$Alch.Rel <- NULL
+vifcor(temp)
+```
+
+<br/>
+
+### Box Plots
+
+Below is a scaled box plots of the variables. As you can see, there are some outliers in the data set. Usually, there are three general reasons for outliers. Reasons can include data entry or measurement error, sampling problems or unusual conditions, or simply a natural variation. As we do not have expert domain knowledge about the process that generated the data, we are unsure as to the nature of the reasons behind these outliers. As a result of this, it is hard do a reasonable assessment on whether to drop the outliers or not. If these outliers are a result of natural variation in the process, they capture valuable information that should probably be represented in the model. 
+
+
+For example, predictors `MFR`, `Filler.Speed`, and `Oxygen.Filler` appear to have some significant outliers. 
+
+The histogram chart below shows the distribution of predictors that appear to have some outliers. `Carb.Flow` and `Air.Pressure` appear to have multimodal distributions. 
+
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+x <- data.frame(scale(na.omit(student_data[c(2:33)])))
+ggplot(stack(x), aes(x= ind, y = values)) + 
+  geom_boxplot(outlier.colour="blue", outlier.shape=1, outlier.size=2, aes(fill=ind)) + theme_minimal() + coord_flip() 
+```
+
+
+```{r fig.height=5, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+plot_histogram(student_data[c(23, 18, 27, 30, 19, 21)])
+```
+
+<br/>
+
+
+### Missing Data 
+
+As you can see, approximately 8.25 percent of the rows are missing values for `MFR` with a count of 212 missing values. Bias is likely in analyses when missingness is more than 10%. So, based on this rule of thumb, it's probably safe to impute missing values for `MFR`. Earlier data exploration revealed that the categorical variable `Brand.Code` has missing values. However, the `plot_missing` function did not reflect this, which originally showed a 0% value for missingness as the missing data are not represented by the value `NA`. To reflect the accurate missing ratio of `Brand.Code`, the value `NA` was assigned. Approximately, 4.67 percent of rows are missing for `Brand.Code`. The response variable `PH` missing ration is 0.16 percent with a count of 4. The rest of the other variables have low missing ratios, which suggests that imputation can be applied safely. 
+
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+#student_data
+student_data[student_data$Brand.Code=="",]$Brand.Code <- NA
+
+#student_eval
+student_eval[student_eval$Brand.Code=="",]$Brand.Code <- NA
+
+plot_missing(student_data)
+```
+
+<br/>
+
+###  Near-Zero Variance
+
+Below checks for predictors that show near zero-variance. These are predictors that do not vary much across observations and do not add much predictive information. 
+
+`freqRatio` is the ratio of frequencies for the most common value over the second most common value. `percentUnique` is the percentage of unique data points out of the total number of data points. `zeroVar` shows `true` if the predictor only has one distinct value; otherwise, `false`. `nzv` shows `true` if the predictor is a near zero variance predictor. The table below is sorted by `nzv`, and as you can see, predictor `Hyd.Pressure1` has been determined to be a near zero-variance predictor. The rest of the predictors are not near zero-variance. 
+
+```{r}
+result <- nearZeroVar(student_data, saveMetrics= TRUE)
+datatable(result[order(-result$nzv),])
+```
+
+---
+
+<br/>
+
+## 3. Data Preparation 
+
+Based on the data exploration findings, we learned that there are missing values in the data set, predictors that are strongly correlated with each other, predictors that show near zero-variance, and predictors with outliers. 
+
+The `student_data` data frame is copied before we start modifying the data frame by dropping variables and imputing missing values. The `student_eval` data is also processed in parallel with `student_data`.  
+
+```{r}
+#copy of original student_data
+student_data2 <- student_data
+
+#copy of original student_eval
+student_eval2 <- student_eval
+```
+
+<br/>
+
+### Near Zero-Variance
+
+During data exploration, it was determined that predictor `Hyd.Pressure1` is a near zero-variance variable. This variable is dropped.   
+
+```{r}
+#drop for student_data
+student_data$Hyd.Pressure1 <- NULL
+
+#drop for student_eval
+student_eval$Hyd.Pressure1 <- NULL
+```
+
+<br/>
+
+### Multicollinearity 
+
+During data exploration, the `vifcor` function identified 6 predictors that have collinearity problems. These variables are dropped. 
+
+Drop variables `Balling`, `Bowl.Setpoint`, `Balling.Lvl`,`MFR`, `Hyd.Pressure3`, `Alch.Rel`. 
+
+```{r}
+#drop for student_data
+student_data$Balling <- NULL
+student_data$Bowl.Setpoint <- NULL
+student_data$Balling.Lvl <- NULL
+student_data$MFR <- NULL
+student_data$Hyd.Pressure3 <- NULL
+student_data$Alch.Rel <- NULL
+
+#drop for student_eval
+student_eval$Balling <- NULL
+student_eval$Bowl.Setpoint <- NULL
+student_eval$Balling.Lvl <- NULL
+student_eval$MFR <- NULL
+student_eval$Hyd.Pressure3 <- NULL
+student_eval$Alch.Rel <- NULL
+```
+
+<br/>
+
+### Missing Values 
+
+- Drop observations with missing `PH` values
+- Assign `Brand.Code` with blank values to `U`. 
+- Impute missing values. 
+
+The code below drops observations with missing `PH` values. 
+
+```{r}
+#drop for student_data
+student_data <- student_data[!is.na(student_data$PH), ]
+
+#note: student_eval all observations do not have PH values
+```
+
+The blank `Brand.Code` values were explicitly assigned the value `NA` previously. The code below assigns the category `U` to blank values of `Brand.Code`. 
+
+```{r}
+#student_data
+student_data[is.na(student_data$Brand.Code),]$Brand.Code <- 'U'
+
+#student_eval
+student_eval[is.na(student_eval$Brand.Code),]$Brand.Code <- 'U'
+```
+
+Below is box plot of response variable `PH` by `Brand.Code` grouping. 
+
+```{r}
+boxplot(formula=PH~`Brand.Code`, data=student_data)
+```
+
+
+Impute missing values through `mice` package. Below is an excerpt from the `mice` package documentation. 
+
+> The mice package implements a method to deal with missing data. The package creates multiple imputations (replacement values) for multivariate missing data. The method is based on Fully Conditional Specification, where each incomplete variable is imputed by a separate model. The MICE algorithm can impute mixes of continuous, binary, unordered categorical and ordered categorical data. In addition, MICE can impute continuous two-level data, and maintain consistency between imputations by means of passive imputation. Many diagnostic plots are implemented to inspect the quality of the imputations.
+Apply the imputation function. The returns an S3 object of class `mids` (multiply imputed data set). 
+
+
+
+```{r message =FALSE, warning=FALSE}
+#student_data
+s3obj_mice = mice(student_data, print = FALSE, seed = 360)
+
+#student_eval
+s3obj_mice_eval = mice(student_eval, print = FALSE, seed = 360)
+```
+
+Below is density plot of the variables with imputed data. 
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+densityplot(s3obj_mice)
+```
+
+The `complete` function of the `mice` package exports the imputed data. Update `student_data` with the imputed results. 
+
+```{r}
+#student_data
+student_data = complete(s3obj_mice)
+
+#student_eval
+student_eval = complete(s3obj_mice_eval)
+```
+
+After the the data preparation steps applied above, the data frame is left with 2,567 observations and 26 variables. As you can see, we no longer have any missing values. 
+
+```{r}
+skim(student_data)
+```
+
+
+<br/>
+
+### Outliers 
+
+We're not dropping any observations with outliers. 
+
+<br/> 
+
+### Create Dummy Variables for Categorical Variable `Brand.Code`
+
+The code below creates dummy variables that encode categorical variables into `1` or `0`. The dummy variables are added to the data frame, and the categorical variable is then removed from the data frame. 
+
+```{r}
+# student_data
+Brand.A <- ifelse(student_data$Brand.Code  == 'A', 1, 0)
+Brand.B <- ifelse(student_data$Brand.Code  == 'B', 1, 0)
+Brand.C <- ifelse(student_data$Brand.Code  == 'C', 1, 0)
+Brand.D <- ifelse(student_data$Brand.Code  == 'D', 1, 0)
+Brand.U <- ifelse(student_data$Brand.Code  == 'U', 1, 0)
+# add dummy columns to data frame
+student_data$Brand.A <- Brand.A
+student_data$Brand.B <- Brand.B
+student_data$Brand.C <- Brand.C
+student_data$Brand.D <- Brand.D
+student_data$Brand.U <- Brand.U
+# remove categorical variable
+student_data <- subset(student_data, select = -c(Brand.Code))
+
+
+#student_eval
+Brand.A <- ifelse(student_eval$Brand.Code  == 'A', 1, 0)
+Brand.B <- ifelse(student_eval$Brand.Code  == 'B', 1, 0)
+Brand.C <- ifelse(student_eval$Brand.Code  == 'C', 1, 0)
+Brand.D <- ifelse(student_eval$Brand.Code  == 'D', 1, 0)
+Brand.U <- ifelse(student_eval$Brand.Code  == 'U', 1, 0)
+# add dummy columns to data frame
+student_eval$Brand.A <- Brand.A
+student_eval$Brand.B <- Brand.B
+student_eval$Brand.C <- Brand.C
+student_eval$Brand.D <- Brand.D
+student_eval$Brand.U <- Brand.U
+# remove categorical variable
+student_eval <- subset(student_eval, select = -c(Brand.Code))
+```
+
+After the steps above were applied, the `student_data` data frame has 30 variables. 
+
+```{r}
+skim(student_data)
+```
+
+---
+
+<br/>
+
+## 4. Model Building 
+
+In this section, three categories of models were considered: (1) linear, (2) non-linear, and (3) tree-based. In total, nine models were considered. Linear models considered include PLS, Ridge, ENet, and Lasso.  Non-linear models considered include KNN, MARS, and SVM. Tree-based models considered include random forest and GBM.
+
+### Split Train and Test Data 
+
+The code below splits the data frame `student_data`into training and test sets with 80 percent of the observations going to the training set and 20 percent going to the test set. The training set is used to tune the models. 
+
+```{r}
+# Create training and testing split from training data
+set.seed(525)
+trainrow = createDataPartition(student_data$PH, p = 0.80, list = FALSE)
+student_data_train <- student_data[trainrow, ]
+student_data_test <- student_data[-trainrow, ]
+colPH <- which(colnames(student_data) == "PH")
+train_X <- student_data_train[, -colPH]
+train_Y <- student_data_train$PH
+test_X <- student_data_test[, -colPH]
+test_Y <- student_data_test$PH
+```
+
+Build data frames to save training and test performance. 
+
+```{r}
+#collect results of training and test results on models
+perf_train <- data.frame(Model=character(), RMSE=double(), RSquared=double(), MAE=double())
+perf_test <- data.frame(Model=character(), RMSE=double(), RSquared=double(), MAE=double())
+```
+
+
+<br/>
+
+### Linear Models
+
+<br/>
+
+#### a. Partial Least Square (PLS)
+
+Here, we build the partial least square model. Rsquared was used to select the optimal model. 
+
+```{r}
+set.seed(1)
+PLS_model <- train(x=train_X,
+                y=train_Y, 
+                method='pls',
+                metric='Rsquared',
+                tuneLength=20,
+                trControl=trainControl(method='cv'),
+                preProcess=c('center', 'scale')
+                )
+PLS_model
+```
+
+
+```{r}
+plot(PLS_model)
+```
+
+
+Below is the performance of PLS model on the test set, which is similar to the training set. 
+
+```{r}
+PLS_model_pred <- predict(PLS_model, newdata=test_X)
+(PLS_test <- postResample(pred=PLS_model_pred, obs=test_Y))
+```
+
+Save training and test performance. 
+
+```{r}
+#PLS
+#save training and test perf
+r <- PLS_model$results
+s <- r[which(r$ncomp == PLS_model$bestTune$ncomp),]
+perf_train[nrow(perf_train) + 1,] = c("PLS", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("PLS", PLS_test[1], PLS_test[2], PLS_test[3])
+```
+
+
+<br/>
+
+### b. Ridge 
+
+Here, we build the ridge model. RMSE was used to select the optimal model. 
+
+```{r}
+## Define the candidate set of values
+ridgeGrid <- data.frame(.lambda = seq(0, 1, by=0.1))
+set.seed(1)
+ridge_model <- train(x=train_X,
+                y=train_Y,
+               method = "ridge",
+               tuneGrid = ridgeGrid,
+               trControl = trainControl(method='cv') ,
+               preProc = c("center", "scale")
+              )
+ridge_model
+```
+
+```{r}
+plot(ridge_model)
+```
+
+Below is the performance of ridge model on the test set, which is similar to the training set. 
+
+```{r}
+ridge_model_pred <- predict(ridge_model, newdata=test_X)
+(ridge_test <- postResample(pred=ridge_model_pred, obs=test_Y))
+```
+Save training and test performance. 
+
+```{r}
+#RIDGE
+#save training and test perf
+r <- ridge_model$results
+s <- r[which(r$lambda == ridge_model$bestTune$lambda),]
+perf_train[nrow(perf_train) + 1,] = c("Ridge", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("Ridge", ridge_test[1], ridge_test[2], ridge_test[3])
+```
+
+
+
+<br/>
+
+#### c. Elastic Net (ENet)
+
+Here, we build the Elastic Net model. RMSE was used to select the optimal model. 
+
+```{r message=FALSE, warning=FALSE}
+set.seed(1)
+enet_model <- train(x=train_X,
+                y= train_Y,
+               method = "enet",
+                tuneGrid=expand.grid(.fraction = seq(0, 1, by=0.1), 
+                                      .lambda = seq(0, 1, by=0.1)),
+               trControl = trainControl(method='cv') ,
+               preProc = c("center", "scale")
+              )
+enet_model
+```
+
+```{r}
+plot(enet_model)
+```
+
+Below is performance of ENet model on the test set, which is similar to training set. 
+
+```{r}
+enet_model_pred <- predict(enet_model, newdata=test_X)
+(enet_test <- postResample(pred=enet_model_pred, obs=test_Y))
+```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#Enet
+#save training and test perf
+r <- enet_model$results
+s <- r[which(r$lambda == enet_model$bestTune$lambda & r$fraction == enet_model$bestTune$fraction),]
+perf_train[nrow(perf_train) + 1,] = c("Enet", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("Enet", enet_test[1], enet_test[2], enet_test[3])
+```
+
+<br/>
+
+
+#### d. Lasso
+
+Here, we build the lasso model. Rsquared was used to select the optimal model. 
+
+
+```{r message=FALSE, warning=FALSE}
+set.seed(1)
+lasso_model <- train(x=train_X,
+                  y=train_Y,
+                  method='lasso',
+                  metric='Rsquared',
+                  tuneGrid=data.frame(.fraction = seq(0, 0.5, by=0.05)),
+                  trControl=trainControl(method='cv'),
+                  preProcess=c('center','scale')
+                  )
+lasso_model
+```
+
+```{r}
+plot(lasso_model)
+```
+
+Below is performance of lasso model on test set, which is similar to training set. 
+
+```{r}
+lasso_model_pred <- predict(lasso_model, newdata=test_X)
+(lasso_test <- postResample(pred=lasso_model_pred, obs=test_Y))
+```
+
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#LASSo
+#save training and test perf
+r <- lasso_model$results
+s <- r[which(r$fraction == lasso_model$bestTune$fraction),]
+perf_train[nrow(perf_train) + 1,] = c("Lasso", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("Lasso", lasso_test[1], lasso_test[2], lasso_test[3])
+```
+
+
+<br/>
+
+### Non-Linear Models
+
+<br/>
+
+#### a. K-nearest Neighbors (KNN)
+
+Here, we build the K-nearest Neighbor model. RMSE metric was used to select the optimal model.
+
+```{r}
+set.seed(1)
+knn_model <- train(x=train_X, 
+                   y=train_Y, 
+                  method="knn", 
+                  tuneLength=20, 
+                  trainControl=trainControl(method = "repeatedcv", repeats = 5),
+                  preProc = c("center", "scale"))
+knn_model
+```
+```{r}
+plot(knn_model)
+```
+
+Below is the performance of the KNN model on the test set, which is similar to the training set. 
+
+```{r}
+knn_pred <- predict(knn_model, newdata=test_X)
+(knn_test <- postResample(pred=knn_pred,test_Y))
+```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#KNN
+#save training and test perf
+r <- knn_model$results
+s <- r[which(r$k == knn_model$bestTune$k),]
+perf_train[nrow(perf_train) + 1,] = c("KNN", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("KNN", knn_test[1], knn_test[2], knn_test[3])
+```
+
+
+<br/>
+
+#### b. Multivariate Adaptive Regression Splines (MARS) 
+
+Here, we build the MARS model. RMSE metric was used to select the optimal model. 
+
+```{r}
+set.seed(1)
+mars_model <- train(x=train_X, y=train_Y, 
+                      method="earth",
+                      tuneLength=20,
+                      preProc = c("center", "scale"))
+mars_model
+```
+
+```{r}
+plot(mars_model)
+```
+
+Below is the performance of the MARS model on the test set, which is similar to the training set.  
+
+```{r}
+mars_pred <- predict(mars_model, newdata=test_X)
+(mars_test <- postResample(pred=mars_pred, test_Y))
+```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#MARS
+#save training and test perf
+r <- mars_model$results
+s <- r[which(r$nprune == mars_model$bestTune$nprune & r$degree == mars_model$bestTune$degree),]
+perf_train[nrow(perf_train) + 1,] = c("MARS", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("MARS", mars_test[1], mars_test[2], mars_test[3])
+```
+
+
+<br/>
+
+#### c. Support Vector Machines (SVM)
+
+Here, we build the SVM model. RMSE was used to select the optimal model. 
+
+```{r}
+set.seed(1)
+svm_model <- train(train_X, 
+                  train_Y, 
+                  method="svmRadial",
+                  tuneLength=10, 
+                  trainControl=trainControl(method = "repeatedcv", repeats = 5),
+                  preProc = c("center", "scale"))
+svm_model
+```
+
+```{r}
+plot(svm_model)
+```
+
+Below is the performance of the SVM model on the test set, which is similar to the training set. 
+
+```{r}
+svm_pred <- predict(svm_model, newdata=test_X)
+(svm_test <- postResample(pred=svm_pred,test_Y))
+```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#SVM
+#save training and test perf
+r <- svm_model$results
+s <- r[which(r$sigma == svm_model$bestTune$sigma & r$C == svm_model$bestTune$C),]
+perf_train[nrow(perf_train) + 1,] = c("SVM", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3])
+```
+
+
+<br/>
+
+### Tree-Based Models
+
+<br/>
+
+#### a. Random Forest
+
+Here, we build the random forest model with `ntree` set to 100. 
+
+```{r}
+rf_model <- randomForest(x = train_X, y = train_Y, ntree = 100)
+rf_model
+```
+
+Below is the performance of the random forest model on the test set, which is similar to the training set. 
+
+```{r}
+rf_model_pred <- predict(rf_model, test_X)
+(rf_test <- postResample(pred = rf_model_pred, obs = test_Y))
+```
+
+Save training and test performance. 
+
+```{r echo=FALSE}
+#Random Forest
+#save training and test perf
+perf_test[nrow(perf_test) + 1,] = c("Random Forest", rf_test[1], rf_test[2], rf_test[3])
+```
+
+
+<br/>
+
+#### b. Gradient Boosting Machine (GBM)
+
+Here, we build the gradient boosting machine model. RMSE was used to select the optimal model. 
+
+```{r}
+gbmGrid = expand.grid(interaction.depth = seq(1,5, by=2), n.trees = seq(100, 1000, by = 100), shrinkage = 0.1, n.minobsinnode = 5)
+gbm_model <- train(train_X, train_Y, tuneGrid = gbmGrid, verbose = FALSE, method = 'gbm' )
+gbm_model
+```
+
+Below is the performance of the GMB model on the test set, which is similar to the training set. 
+
+```{r}
+gbm_model_pred <- predict(gbm_model, test_X)
+(gbm_test <- postResample(pred = gbm_model_pred, obs = test_Y))
+```
+
+```{r echo=FALSE}
+#GBM
+#save training and test perf
+r <- gbm_model$results
+t <- gbm_model$bestTune
+s <- r[which(r$n.trees == t$n.trees & r$interaction.depth == t$interaction.depth & 
+               r$shrinkage == t$shrinkage & r$n.minobsinnode == t$n.minobsinnode),]
+perf_train[nrow(perf_train) + 1,] = c("GBM", s$RMSE, s$Rsquared, s$MAE)
+perf_test[nrow(perf_test) + 1,] = c("GBM", gbm_test[1], gbm_test[2], gbm_test[3])
+```
+
+
+---
+
+<br/>
+
+## 5. Variable of Importance
+
+Predictor `Mnf.flow` appears to be the most important predictor across the nine different models considered. 
+
+<br/>
+
+#### a. Linear Models 
+
+<br/> 
+
+The chart below shows the levels of importance for each predictor. For all linear models considered, `Mnf.flow` shows as the most important predictor. 
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+p1 <- plot(varImp(PLS_model), main = "PLS Model") 
+p2 <- plot(varImp(enet_model), main = "ENET Model")
+p3 <- plot(varImp(ridge_model), main = "Ridge Model")
+p4 <- plot(varImp(lasso_model), main = "Lasso Model")
+```
+
+```{r fig.height=10, fig.width=10, echo=FALSE}
+gridExtra::grid.arrange(p1,p2, p3,p4, nrow=2)
+```
+
+<br/>
+
+#### b. Non-Linear Models
+
+<br/> 
+
+The chart below shows the levels of importance for each predictor. For all the non-linear models, `Mnf.Flow` shows as the most important predictor.  
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+p1 <- plot(varImp(knn_model), main = "KNN Model") 
+p2 <- plot(varImp(mars_model), main = "MARS Model")
+p3 <- plot(varImp(svm_model), main = "SVM Model")
+```
+
+```{r fig.height=10, fig.width=10, echo=FALSE}
+gridExtra::grid.arrange(p1,p2, p3, nrow=2)
+```
+
+<br/>
+
+#### c. Tree-Based Models 
+
+<br/> 
+
+The chart below shows the levels of importance for each predictor. For all tree-based models considered, `Mnf.flow` is the most important predictor. 
+
+```{r echo=FALSE}
+rfImp1 <- rf_model$importance 
+p1_trees <-  vip(rf_model) + ggtitle('Random Forest Var Imp')
+```
+
+```{r echo=FALSE}
+gbmImp1 <- gbm_model$importance 
+p2_trees<-vip(gbm_model) + ggtitle('GBM Var Imp')
+```
+
+```{r fig.height=5, fig.width=10, echo=FALSE}
+gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
+```
+
+---
+
+<br/> 
+
+## 6. Model Selection
+
+Nine different models were considered from three different classes of models, which includes linear, non-linear, and tree-based models. For model selection, we've decided to compare the performance of each model on the test set using RMSE. Below is a table that shows how well each model did based on RMSE, RSquared, and MAE. 
+
+As you can see, Random Forest model is the best performing model based on lowest RMSE. It also happens to be the model with the higest r-squared as well. 
+
+
+### Performance of Models on Test Set 
+
+```{r}
+datatable(perf_test[order(perf_test$RMSE),])
+```
+
+### Tuning Performance
+
+Below is a table that shows the performance of each model on the training set. The random forest metrics are below the table (as we could not figure out how to add it in the table dynamically). 
+
+```{r}
+datatable(perf_train[order(perf_train$RMSE),])
+```
+<br/> 
+
+Random Forest is not in the table above. Below is this model's performance on the training set. 
+
+```{r echo=FALSE}
+rf_model
+```
+
+---
+
+<br/> 
+
+## 7. Model Evaluation 
+
+The `student_eval` data set has been processed in parallel with `student_data` so that any variables dropped or any imputation done on `student_data` is also performed on `student_eval`. 
+
+At this stage, we should expect for `student_eval` to have no missing values except for `PH`. The evaluation data set has 267 observations. As expected, there are 29 predictors. 
+
+```{r}
+skim(student_eval)
+```
+
+### Use Selected Model to Predict `PH` on `student_eval`
+
+<br/> 
+
+The selected model is the <b>random forest model</b>. This model is used to predict response variable `PH` on the `student_data`. 
+
+```{r}
+
+student_eval_predictors <- subset(student_eval, select = -PH)
+
+#Prediction is run on random forest model 
+PH_hat <- predict(rf_model, student_eval_predictors)
+student_eval_results <- cbind(PH_hat, student_eval_predictors)
+
+#save copy to csv
+write.csv(student_eval_results, "Student_Eval_Predictions.csv")
+```
+
+<br/> 
+
+#### Predicted `PH`
+
+Below is a preview of the predicted `PH`. 
+
+```{r echo=FALSE}
+datatable(student_eval_results)
+```
+
+#### Overview of Predicted `PH`
+
+<br/>
+
+The predicted `PH` values do not show any values that fall outside the expected PH range of values.  
+
+```{r echo=FALSE}
+skim(student_eval_results$PH_hat)
+```
+
+<br/> 
+
+The general shape of the distribution of the predicted `PH` is approximately normal. There are only 267 rows. 
+
+
+```{r echo=FALSE}
+hist(student_eval_results$PH)
+```
+
+---
+<br/> 
+
+
+## 8. Conclusion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

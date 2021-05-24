@@ -940,7 +940,7 @@ write.csv(student_eval_results, "Student_Eval_Predictions.csv")
 
 <br/> 
 
-#### Predicted `PH`
+### Predicted `PH`
 
 Below is a preview of the predicted `PH`. 
 
@@ -948,9 +948,9 @@ Below is a preview of the predicted `PH`.
 datatable(student_eval_results)
 ```
 
-#### Overview of Predicted `PH`
+<br/> 
 
-<br/>
+### Overview of Predicted `PH`
 
 The predicted `PH` values do not show any values that fall outside the expected PH range of values.  
 

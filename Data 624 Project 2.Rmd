@@ -742,16 +742,16 @@ The chart below shows the levels of importance for each predictor. For all tree-
 
 ```{r echo=FALSE}
 rfImp1 <- rf_model$importance 
-p1_trees <-  vip(rf_model) + ggtitle('Random Forest Var Imp')
+## p1_trees <-  vip(rf_model) + ggtitle('Random Forest Var Imp')
 ```
 
 ```{r echo=FALSE}
 gbmImp1 <- gbm_model$importance 
-p2_trees<-vip(gbm_model) + ggtitle('GBM Var Imp')
+## p2_trees<-vip(gbm_model) + ggtitle('GBM Var Imp')
 ```
 
-```{r fig.height=5, fig.width=10, echo=FALSE}
-gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
+```{r}
+## gridExtra::grid.arrange(p1_trees,p2_trees, nrow=1)
 ```
 
 ---

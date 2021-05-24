@@ -737,7 +737,8 @@ Save training and test performance.
 r <- svm_model$results
 s <- r[which(r$sigma == svm_model$bestTune$sigma & r$C == svm_model$bestTune$C),]
 perf_train[nrow(perf_train) + 1,] = c("SVM", s$RMSE, s$Rsquared, s$MAE)
-perf_test[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3])
+perf_t
+sest[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3])
 ```
 
 
@@ -753,6 +754,7 @@ Next set of models is part are the tree based models which consist of **Random F
 Here, we build the random forest model with `ntree` set to 100. 
 
 ```{r}
+set.seed(1)
 rf_model <- randomForest(x = train_X, y = train_Y, ntree = 100)
 rf_model
 ```
@@ -780,6 +782,7 @@ perf_test[nrow(perf_test) + 1,] = c("Random Forest", rf_test[1], rf_test[2], rf_
 Here, we build the gradient boosting machine model. RMSE was used to select the optimal model. 
 
 ```{r}
+set.seed(1)
 gbmGrid = expand.grid(interaction.depth = seq(1,5, by=2), n.trees = seq(100, 1000, by = 100), shrinkage = 0.1, n.minobsinnode = 5)
 gbm_model <- train(train_X, train_Y, tuneGrid = gbmGrid, verbose = FALSE, method = 'gbm' )
 gbm_model
@@ -937,7 +940,7 @@ write.csv(student_eval_results, "Student_Eval_Predictions.csv")
 
 <br/> 
 
-#### Predicted `PH`
+### Predicted `PH`
 
 Below is a preview of the predicted `PH`. 
 
@@ -945,9 +948,9 @@ Below is a preview of the predicted `PH`.
 datatable(student_eval_results)
 ```
 
-#### Overview of Predicted `PH`
+<br/> 
 
-<br/>
+### Overview of Predicted `PH`
 
 The predicted `PH` values do not show any values that fall outside the expected PH range of values.  
 

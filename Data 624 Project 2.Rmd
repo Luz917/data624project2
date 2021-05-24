@@ -424,7 +424,8 @@ test_Y <- student_data_test$PH
 
 ### Linear Models
 
-First set of models that will be done are the liner models. Linear models include **Partial Least Square** which is part of the pls library, There are three models that are from the elasticnect library and those models are **Ridge**, **Elastic Net**, and **Lasso**. 
+First set of models that will be done are the liner models. Linear models include **Partial Least Square** which is part of the pls library, There are three models that are from the elasticnect library and those models are **Ridge**, **Elastic Net**, and **Lasso**.
+
 <br/>
 
 #### a. Partial Least Square (PLS)
@@ -494,6 +495,7 @@ postResample(pred=ridge_model_pred, obs=test_Y)
 <br/>
 
 #### c. Elastic Net (ENet)
+
 Elastic Net creates a regression model that is then penalized with the L1-norm and L2-norm. Enet effectively shrink coefficients and it also sets some coefficients to zero. Elastic Net Model uses RMSE uses to select the optimal model.  Here, we build the Elastic Net model.
 
 ```{r message=FALSE, warning=FALSE}
@@ -526,6 +528,7 @@ postResample(pred=enet_model_pred, obs=test_Y)
 
 
 #### d. Lasso
+
 Lasso stands for Least Absolute Shrinkage and Selection Operator. As its name suggest Lasso shrinks the coeeficients of the regression toward zero which then penalizes the regression model to L1-norm, the sum of the absolute coefficients. Lasso uses the Rsquared in order to select the optimal model. Here, we build the lasso model.  
 
 

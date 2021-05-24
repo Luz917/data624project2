@@ -433,11 +433,13 @@ perf_test <- data.frame(Model=character(), RMSE=double(), RSquared=double(), MAE
 
 ### Linear Models
 
+First set of models that will be done are the liner models. Linear models include **Partial Least Square** which is part of the pls library, There are three models that are from the elasticnect library and those models are **Ridge**, **Elastic Net**, and **Lasso**.
+
 <br/>
 
 #### a. Partial Least Square (PLS)
 
-Here, we build the partial least square model. Rsquared was used to select the optimal model. 
+Partial Least Squares is a type of technique that minimizes the predictors into smaller sets of components that are uncorrelated conducts partial least regression on them, and it does not do it on the original data. In PLS predictors can be highly correlated. Predictors are measured with error as it does not assume that the data is fixed. PLS uses  Rsquared to select the optimal model. Here we build the PLS model.
 
 ```{r}
 set.seed(1)
@@ -452,6 +454,7 @@ PLS_model <- train(x=train_X,
 PLS_model
 ```
 
+Below is the plot of the PLS model of the RSquared data. 
 
 ```{r}
 plot(PLS_model)
@@ -481,7 +484,7 @@ perf_test[nrow(perf_test) + 1,] = c("PLS", PLS_test[1], PLS_test[2], PLS_test[3]
 
 ### b. Ridge 
 
-Here, we build the ridge model. RMSE was used to select the optimal model. 
+Ridge regression is a technique that shrinks the regression coefficients, that makes variables, have an outcome with minor contributions, and makes the coefficients close to zero. The ridge model determines is RMSE by selecting the optimal model. Here we buld the ridge model.  
 
 ```{r}
 ## Define the candidate set of values
@@ -496,6 +499,8 @@ ridge_model <- train(x=train_X,
               )
 ridge_model
 ```
+
+Below is the plot of the Ridge model of the RSquared data.
 
 ```{r}
 plot(ridge_model)
@@ -524,7 +529,7 @@ perf_test[nrow(perf_test) + 1,] = c("Ridge", ridge_test[1], ridge_test[2], ridge
 
 #### c. Elastic Net (ENet)
 
-Here, we build the Elastic Net model. RMSE was used to select the optimal model. 
+Elastic Net creates a regression model that is then penalized with the L1-norm and L2-norm. Enet effectively shrink coefficients and it also sets some coefficients to zero. Elastic Net Model uses RMSE uses to select the optimal model.  Here, we build the Elastic Net model.
 
 ```{r message=FALSE, warning=FALSE}
 set.seed(1)
@@ -538,6 +543,8 @@ enet_model <- train(x=train_X,
               )
 enet_model
 ```
+
+Below is the plot of the ENet model of the RSquared data.
 
 ```{r}
 plot(enet_model)
@@ -566,7 +573,7 @@ perf_test[nrow(perf_test) + 1,] = c("Enet", enet_test[1], enet_test[2], enet_tes
 
 #### d. Lasso
 
-Here, we build the lasso model. Rsquared was used to select the optimal model. 
+Lasso stands for Least Absolute Shrinkage and Selection Operator. As its name suggest Lasso shrinks the coeeficients of the regression toward zero which then penalizes the regression model to L1-norm, the sum of the absolute coefficients. Lasso uses the Rsquared in order to select the optimal model. Here, we build the lasso model.  
 
 
 ```{r message=FALSE, warning=FALSE}
@@ -581,6 +588,8 @@ lasso_model <- train(x=train_X,
                   )
 lasso_model
 ```
+
+Below is the plot of the Lasso model of the RSquared data.
 
 ```{r}
 plot(lasso_model)
@@ -610,7 +619,12 @@ perf_test[nrow(perf_test) + 1,] = c("Lasso", lasso_test[1], lasso_test[2], lasso
 
 ### Non-Linear Models
 
+<<<<<<< HEAD
 <br/>
+=======
+Next set of models that will be done are the non-linear models. The non_linear models consist of **K-Nearest Neighbors (KNN)**, **Support Vector Machines (SVM)**,and **Multivariate Adaptive Regression Splines (MARS)**. SVM model and KNN model both use the caret library, while MARS uses the earth library. 
+
+>>>>>>> afcd90d5a2c7c53b1f9bdeb7944a66c94400dad2
 
 #### a. K-nearest Neighbors (KNN)
 
@@ -731,9 +745,10 @@ perf_test[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3]
 
 ### Tree-Based Models
 
+Next set of models is part are the tree based models which consist of **Random Forest(RF)**, and the **Gradient Boosting Machine**. RF Model uses the randomforest library while GMB Model uses the caret library.
 <br/>
 
-#### a. Random Forest
+#### a. Random Forest(RF)
 
 Here, we build the random forest model with `ntree` set to 100. 
 

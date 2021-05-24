@@ -737,8 +737,7 @@ Save training and test performance.
 r <- svm_model$results
 s <- r[which(r$sigma == svm_model$bestTune$sigma & r$C == svm_model$bestTune$C),]
 perf_train[nrow(perf_train) + 1,] = c("SVM", s$RMSE, s$Rsquared, s$MAE)
-perf_t
-sest[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3])
+perf_test[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3])
 ```
 
 
@@ -972,13 +971,6 @@ hist(student_eval_results$PH)
 
 
 ## 8. Conclusion
-
-
-
-
-
-
-
 
 
 

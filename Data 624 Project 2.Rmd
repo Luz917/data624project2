@@ -737,8 +737,7 @@ Save training and test performance.
 r <- svm_model$results
 s <- r[which(r$sigma == svm_model$bestTune$sigma & r$C == svm_model$bestTune$C),]
 perf_train[nrow(perf_train) + 1,] = c("SVM", s$RMSE, s$Rsquared, s$MAE)
-perf_t
-sest[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3])
+perf_test[nrow(perf_test) + 1,] = c("SVM", svm_test[1], svm_test[2], svm_test[3])
 ```
 
 
@@ -973,14 +972,7 @@ hist(student_eval_results$PH)
 
 ## 8. Conclusion
 
-
-
-
-
-
-
-
-
+Nine models were considered to build a predictive model for company ABC. The purpose of this model is to predict PH levels of beverages that company ABC manufactures. The selected model is a tree-based model, specifically a random forest model. This model has the lowest RMSE and also happens to have the highest r-squared as well. We were given a student evaluation file. The selected model was used to predict the PH levels for this evaluation data set. The results of the prediction show predicted values that are within the expected range. The general shahpe of the distribution of the predicted values is approximately normal as expected.
 
 
 
